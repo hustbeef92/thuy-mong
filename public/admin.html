@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quản trị | Thủy Mộng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/admin.css" />
+  </head>
+  <body class="admin-body">
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="brand-block admin-brand">
+          <div class="brand-mark">T</div>
+          <div>
+            <div class="brand-name">Thủy Mộng</div>
+            <small>Admin Dashboard</small>
+          </div>
+        </div>
+
+        <nav class="admin-nav">
+          <a href="#overview" class="active">Tổng quan</a>
+          <a href="#orders">Đơn hàng</a>
+          <a href="#scanner">Check-in QR</a>
+          <a href="/">Trang sự kiện</a>
+        </nav>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-header">
+          <div>
+            <p class="eyebrow dark">Quản trị sự kiện</p>
+            <h1>Dashboard Thủy Mộng</h1>
+          </div>
+          <a class="btn btn-primary" href="/">Xem trang công khai</a>
+        </header>
+
+        <section id="overview" class="summary-grid">
+          <div class="summary-card">
+            <span>Tổng doanh thu</span>
+            <strong id="totalRevenue">0 VNĐ</strong>
+          </div>
+          <div class="summary-card">
+            <span>Tổng đơn</span>
+            <strong id="totalOrders">0</strong>
+          </div>
+          <div class="summary-card">
+            <span>Đã thanh toán</span>
+            <strong id="paidOrders">0</strong>
+          </div>
+          <div class="summary-card">
+            <span>Vé đã sử dụng</span>
+            <strong id="usedTickets">0</strong>
+          </div>
+        </section>
+
+        <section id="orders" class="panel">
+          <div class="panel-header">
+            <h2>Danh sách đơn hàng</h2>
+            <div class="filters">
+              <select id="statusFilter">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="Chờ thanh toán">Chờ thanh toán</option>
+                <option value="Đã thanh toán">Đã thanh toán</option>
+              </select>
+              <input id="searchInput" type="text" placeholder="Tìm theo tên, SĐT, mã đơn" />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Khách hàng</th>
+                  <th>SĐT</th>
+                  <th>Hạng/Vật phẩm</th>
+                  <th>Tổng tiền</th>
+                  <th>Trạng thái</th>
+                  <th>Check-in</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="scanner" class="panel scanner-panel">
+          <div class="panel-header scanner-header">
+            <h2>Check-in vé trực tiếp</h2>
+          </div>
+
+          <div class="scanner-layout">
+            <div class="camera-box">
+              <video id="video" autoplay playsinline muted></video>
+              <canvas id="canvas" hidden></canvas>
+              <div class="scan-overlay"></div>
+            </div>
+
+            <div class="result-box">
+              <h3>Kết quả quét</h3>
+              <div id="scanResult" class="scan-result neutral">
+                Chưa có dữ liệu quét.
+              </div>
+              <button id="startScannerBtn" class="btn btn-primary">Mở camera quét QR</button>
+              <button id="stopScannerBtn" class="btn btn-outline secondary">Dừng camera</button>
+              <form id="manualCheckinForm" class="manual-checkin-form">
+                <label for="manualQrCode">Nhập mã QR thủ công</label>
+                <input id="manualQrCode" name="manualQrCode" type="text" placeholder="THUY_MONG|..." autocomplete="off" />
+                <button type="submit" class="btn btn-outline secondary">Xác nhận check-in</button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/assets/admin.js"></script>
+  </body>
+</html>

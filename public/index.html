@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thủy Mộng | Múa Rối Nước</title>
+    <meta
+      name="description"
+      content="Sự kiện nghệ thuật múa rối nước Thủy Mộng diễn ra ngày 17/10/2026. Đặt vé trực tuyến và mua merch lưu niệm độc quyền."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="container nav-wrap">
+          <div class="brand-block">
+            <div class="brand-mark">T</div>
+            <div>
+              <div class="brand-name">Thủy Mộng</div>
+              <small>Múa rối nước</small>
+            </div>
+          </div>
+
+          <nav class="main-nav">
+            <a href="#about">Sự kiện</a>
+            <a href="#tickets">Hạng vé</a>
+            <a href="#merch">Lưu niệm</a>
+            <a href="#checkout">Thanh toán</a>
+          </nav>
+
+          <div class="header-meta">
+            <span>17/10/2026</span>
+            <button class="btn btn-primary" id="nav-book-button">Giỏ hàng: 0</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="container hero-grid">
+            <div class="hero-copy">
+              <p class="eyebrow">Diễn duy nhất · 17/10/2026</p>
+              <h1>Thủy <span class="text-gilded italic-word">Mộng</span></h1>
+              <p class="lead">
+                Một đêm duy nhất giữa gợn nước và ánh trăng, khi mặt ao làng phủ sương,
+                những con rối gỗ thắp sáng mùa thu Hà Nội.
+              </p>
+
+              <div class="cta-row">
+                <button class="btn btn-primary" data-scroll="#tickets">Đặt vé ngay</button>
+                <button class="btn btn-outline" data-scroll="#merch">Xem ấn phẩm lưu niệm</button>
+              </div>
+
+              <div class="stats-row">
+                <div>
+                  <strong>19:30</strong>
+                  <span>Giờ mở màn</span>
+                </div>
+                <div>
+                  <strong>60 phút</strong>
+                  <span>Thời lượng</span>
+                </div>
+                <div>
+                  <strong>361</strong>
+                  <span>Địa điểm</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-visual">
+              <div class="image-card">
+                <img src="/assets/hero-water-puppetry.jpg" alt="Sân khấu múa rối nước dưới ánh trăng" />
+              </div>
+              <div class="floating-card">
+                <span class="tiny-label">Sự kiện đặc biệt</span>
+                <h3>Thủy Mộng</h3>
+                <p>Diễn ra duy nhất vào ngày 17/10/2026</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="about">
+          <div class="container">
+            <div class="section-heading">
+                <p class="eyebrow">Về đêm diễn</p>
+                <h2>Nghìn năm rối nước, một đêm hội ngộ</h2>
+            </div>
+
+            <div class="story-grid">
+              <div class="story-card">
+                  <h3>Di sản trên mặt nước</h3>
+                <p>
+                  Ra đời từ những ruộng lúa ngập nước đồng bằng Bắc Bộ, múa rối nước là
+                  di sản hiếm hoi mà sân khấu chính là mặt nước. Nghệ nhân đứng sau mành tre,
+                  điều khiển những con rối gỗ sơn mài qua hệ thống sào và dây ngầm.
+                </p>
+              </div>
+              <div class="story-card highlighted">
+                  <h3>Một đêm hội ngộ</h3>
+                <p>
+                  Chú Tễu giáo đầu, múa rồng, Lê Lợi trả gươm, đánh cá và múa tiên được
+                  dàn dựng cùng ánh sáng, âm nhạc dân tộc phối khí hiện đại. Suất diễn kéo
+                  dài 60 phút tại Nhà Hát Múa Rối Việt Nam, 361 Trường Chinh.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section tickets-section" id="tickets">
+          <div class="container">
+            <div class="section-heading inline">
+              <div>
+                <p class="eyebrow">Bốn hạng vé</p>
+                <h2>Chọn vị trí của bạn trên mặt nước</h2>
+              </div>
+            </div>
+
+            <div class="ticket-grid" id="ticket-grid"></div>
+          </div>
+        </section>
+
+        <section class="section merch-section" id="merch">
+          <div class="container">
+            <div class="section-heading inline">
+              <div>
+                <p class="eyebrow">Ấn phẩm lưu niệm</p>
+                <h2>Mang một mảnh Thủy Mộng về nhà</h2>
+              </div>
+            </div>
+            <div class="merch-grid" id="merch-grid"></div>
+          </div>
+        </section>
+
+        <section class="section cart-section" id="checkout">
+          <div class="container checkout-grid">
+            <div class="cart-panel">
+              <div class="section-heading small-gap">
+                <p class="eyebrow">Giỏ hàng</p>
+                <h3>Đơn hàng của bạn</h3>
+              </div>
+              <div id="cart-items" class="cart-items"></div>
+              <div class="cart-summary">
+                <div>
+                  <span>Tổng cộng</span>
+                  <strong id="total-price">0 VNĐ</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="checkout-panel">
+              <div class="section-heading small-gap">
+                <p class="eyebrow">Thanh toán</p>
+                <h3>Thanh toán tự động</h3>
+              </div>
+
+              <form id="checkout-form">
+                <div class="field-group">
+                  <label>Họ tên</label>
+                  <input type="text" name="name" placeholder="Nhập họ tên" required />
+                </div>
+                <div class="field-group">
+                  <label>Số điện thoại</label>
+                  <input type="tel" name="phone" placeholder="Nhập số điện thoại" required />
+                </div>
+                <div class="field-group">
+                  <label>Email</label>
+                  <input type="email" name="email" placeholder="Nhập email" required />
+                </div>
+                <button type="submit" class="btn btn-primary full-width">Thanh toán bằng QR</button>
+              </form>
+
+              <div id="payment-account-info" class="payment-account-box" aria-live="polite">
+                <p>VietQR sẽ hiện ngay sau khi bạn xác nhận thông tin. Sau khi nhận được chuyển khoản, hệ thống tự động cập nhật và gửi vé điện tử kèm QR check-in qua email.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-grid">
+          <div>
+            <div class="brand-block small-brand">
+              <div class="brand-mark">T</div>
+              <div>
+                <div class="brand-name">Thủy Mộng</div>
+                <small>Art & Water Performance</small>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4>Liên hệ</h4>
+            <ul>
+              <li>Nhà Hát Múa Rối Việt Nam</li>
+              <li>361 Trường Chinh, Thanh Xuân, Hà Nội</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Thông tin</h4>
+            <ul>
+              <li>096 775 20 06</li>
+              <li>thuymongsukien2026@gmail.com</li>
+              <li><a href="/admin">Quản trị</a></li>
+            </ul>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <script src="/assets/script.js"></script>
+  </body>
+</html>
