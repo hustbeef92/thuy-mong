@@ -75,7 +75,11 @@
               </select>
               <input id="searchInput" type="text" placeholder="Tìm theo tên, SĐT, mã đơn" />
               <button id="refreshOrdersBtn" type="button" class="btn btn-outline" style="color: #000; border-color: #000; font-size: 13px; font-weight: 600; padding: 7px 12px; cursor: pointer; border-radius: 8px;" title="Làm mới danh sách đơn hàng">🔄 Làm mới</button>
+              <button id="exportCsvBtn" type="button" class="btn btn-outline" style="color: #065f46; border-color: #065f46; background: #ecfdf5; font-size: 13px; font-weight: 600; padding: 7px 12px; cursor: pointer; border-radius: 8px;" title="Xuất toàn bộ đơn hàng ra file CSV">📥 Xuất CSV</button>
             </div>
+          </div>
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 10px 14px; margin: 8px 0; font-size: 13px; color: #92400e;">
+            ⚠️ <strong>Lưu ý:</strong> Dữ liệu có thể bị mất khi server Vercel khởi động lại. Hãy thường xuyên nhấn <strong>📥 Xuất CSV</strong> để backup toàn bộ lịch sử đơn hàng về máy.
           </div>
           <div class="mobile-table-hint">💡 Vuốt sang ngang để xem đầy đủ thông tin đơn và biên lai →</div>
           <div class="table-wrap">

@@ -333,6 +333,60 @@ if (refreshOrdersBtn) {
   });
 }
 
+const exportCsvBtn = document.getElementById('exportCsvBtn');
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener('click', async () => {
+    try {
+      exportCsvBtn.disabled = true;
+      exportCsvBtn.textContent = 'Đang xuất...';
+
+      const response = await fetch('/api/admin/orders', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Không thể tải dữ liệu');
+      const data = await response.json();
+      const orders = data.orders || [];
+
+      if (orders.length === 0) {
+        alert('Không có đơn hàng nào để xuất.');
+        return;
+      }
+
+      const headers = ['Mã đơn', 'Tên khách', 'SĐT', 'Email', 'Nơi nhận', 'Hạng/Vật phẩm', 'Tổng tiền', 'Trạng thái thanh toán', 'Trạng thái vé', 'Thời gian tạo'];
+      const rows = orders.map(o => {
+        const items = (o.items || []).map(i => `${i.name} x${i.quantity}`).join(' | ');
+        const total = o.total || 0;
+        const createdAt = o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '—';
+        return [
+          o.orderCode || '',
+          o.customer?.name || '',
+          o.customer?.phone || '',
+          o.customer?.email || '',
+          o.deliveryLocation || 'Nhận tại sự kiện',
+          items,
+          total,
+          o.status || '',
+          o.ticketStatus || 'Chưa sử dụng',
+          createdAt
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const now = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `ThuMong_DonHang_${now}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Lỗi xuất CSV: ' + (err.message || 'Không thể xuất'));
+    } finally {
+      exportCsvBtn.disabled = false;
+      exportCsvBtn.textContent = '📥 Xuất CSV';
+    }
+  });
+}
+
 const imageModal = document.getElementById('imageModal');
 const closeImageModalBtn = document.getElementById('closeImageModal');
 const imageModalBackdrop = document.getElementById('imageModalBackdrop');
