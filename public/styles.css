@@ -379,7 +379,7 @@ small {
   margin: 0;
   font-size: clamp(2.1rem, 3vw, 3.1rem);
   font-family: "Cormorant Garamond", serif;
-  color: #201a16;
+  color: var(--gold-soft);
 }
 
 .story-grid {
@@ -1025,7 +1025,7 @@ body .add-to-cart:hover {
   margin: 0;
   font-size: clamp(2rem, 3vw, 3rem);
   font-family: "Cormorant Garamond", serif;
-  color: #201a16;
+  color: var(--gold-soft);
 }
 
 .story-grid {
