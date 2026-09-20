@@ -114,7 +114,7 @@ function renderTickets() {
       <article class="ticket-card">
         <img src="${ticket.id}.jpg" alt="${ticket.name}" class="ticket-card-img" />
         <div class="ticket-top">
-          <h3>${ticket.name} (${formatCurrency(ticket.price)})</h3>
+          <h3>${ticket.name}</h3>
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
         </div>
         <p>${ticket.benefit}</p>
@@ -145,7 +145,7 @@ function renderMerch() {
       <article class="merch-card">
         <div class="merch-art" aria-hidden="true">${item.id === 'combo-merch' ? 'COMBO' : 'KHĂN'}</div>
         <div class="ticket-top">
-          <h3>${item.name} (${formatCurrency(item.price)})</h3>
+          <h3>${item.name}</h3>
           <span class="ticket-price">${formatCurrency(item.price)}</span>
         </div>
         <p>${item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.'}</p>
