@@ -225,10 +225,10 @@ small {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  padding-right: 0.1em;
 }
 
 .italic-word {
-  font-style: italic;
 }
 
 .lead {
@@ -1254,7 +1254,6 @@ body .add-to-cart:hover {
 
 .empty-state {
   color: var(--muted);
-  font-style: italic;
 }
 
 .field-group {
