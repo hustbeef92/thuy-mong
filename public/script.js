@@ -73,6 +73,7 @@ function renderPaidOrderStatus(order) {
         <p><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
         <p><strong>Trạng thái vé:</strong> ${order.ticketStatus || 'Chưa sử dụng'}</p>
         <p>QR check-in đã hiển thị trực tiếp trên màn hình. Bạn có thể chụp màn hình hoặc tải hình ảnh về để dùng khi vào sự kiện.</p>
+        ${order.qrCodeUrl ? `<a href="${order.qrCodeUrl}" download="QR-Checkin-${order.orderCode}.png" class="btn btn-primary full-width" style="text-align: center; margin-top: 12px;">Tải mã QR</a>` : ''}
       </div>
     `;
   }
