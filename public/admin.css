@@ -350,3 +350,133 @@ th {
     align-items: flex-start;
   }
 }
+
+/* Proof Image Preview & Lightbox Modal */
+.btn-view-proof {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gold);
+  color: #1a1510;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-view-proof:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.proof-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proof-mini-thumb {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.image-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  z-index: 10;
+  background: white;
+  padding: 12px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.image-modal-content img {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.image-modal-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.image-modal-close:hover {
+  transform: scale(1.1);
+}
+
+.email-status {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.email-status.success {
+  color: #2da76d;
+}
+
+.email-status.fail {
+  color: #d94f4f;
+}
+
+.btn-resend-email {
+  margin-top: 4px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.btn-resend-email:hover {
+  background: rgba(0,0,0,0.05);
+  color: var(--text);
+}
+

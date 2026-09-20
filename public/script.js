@@ -483,7 +483,52 @@ checkoutForm.addEventListener('submit', async (event) => {
         <p><strong>Nội dung chuyển khoản:</strong> ${payment.transferContent}</p>
         <p><strong>Ngân hàng:</strong> ${payment.bankName} · <strong>STK:</strong> ${payment.accountNumber}</p>
         <p class="payment-note">Sau khi chuyển khoản thành công, hệ thống sẽ tự động xác nhận thanh toán và hiển thị QR check-in ngay trên màn hình cho bạn.</p>
+        <div class="proof-upload-box" style="margin-top: 18px; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; background: rgba(255,255,255,0.03);">
+          <p style="margin: 0 0 8px; font-weight: 600;">Đã chuyển khoản xong? Tải ảnh biên lai/màn hình tại đây:</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <input type="file" id="post-payment-proof" accept="image/*" style="font-size: 0.85rem;" />
+            <button type="button" class="btn btn-outline" id="btn-upload-proof" style="padding: 6px 14px; font-size: 0.85rem;">Gửi ảnh biên lai</button>
+          </div>
+          <div id="proof-status-msg" style="margin-top: 8px; font-size: 0.85rem;"></div>
+        </div>
       `;
+
+      const postPaymentInput = document.getElementById('post-payment-proof');
+      const btnUploadProof = document.getElementById('btn-upload-proof');
+      const proofStatusMsg = document.getElementById('proof-status-msg');
+
+      if (btnUploadProof && postPaymentInput) {
+        btnUploadProof.addEventListener('click', async () => {
+          if (!postPaymentInput.files || !postPaymentInput.files[0]) {
+            showToast('Vui lòng chọn ảnh chụp biên lai/màn hình.');
+            return;
+          }
+          try {
+            btnUploadProof.disabled = true;
+            btnUploadProof.textContent = 'Đang tải lên...';
+            proofStatusMsg.textContent = 'Đang xử lý và gửi ảnh...';
+            proofStatusMsg.style.color = 'var(--gold)';
+            const proofData = await readPaymentProofAsDataUrl(postPaymentInput.files[0]);
+            const uploadRes = await fetch(`/api/orders/${result.order.orderCode}/proof`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ proofImage: proofData })
+            });
+            const uploadJson = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadJson.message || 'Tải ảnh thất bại');
+            proofStatusMsg.textContent = '✓ Đã tải ảnh biên lai thành công! Admin sẽ kiểm tra và xác nhận.';
+            proofStatusMsg.style.color = '#2da76d';
+            showToast('Đã tải ảnh biên lai thành công!');
+          } catch (err) {
+            proofStatusMsg.textContent = 'Lỗi: ' + (err.message || 'Không thể tải ảnh');
+            proofStatusMsg.style.color = '#e74c3c';
+            showToast(err.message || 'Tải ảnh thất bại');
+          } finally {
+            btnUploadProof.disabled = false;
+            btnUploadProof.textContent = 'Gửi ảnh biên lai';
+          }
+        });
+      }
     }
     startPaymentStatusPolling(result.order.orderCode, result.order.customer.email || '');
     showToast('Đơn hàng đã tạo. Vui lòng quét QR để thanh toán.');

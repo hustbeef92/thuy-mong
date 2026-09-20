@@ -51,11 +51,13 @@ async function loadOrders() {
     if (!response.ok) throw new Error(`Admin API ${response.status}`);
     const data = await response.json();
 
-  const summary = data.summary || {};
-  totalRevenueEl.textContent = formatCurrency(summary.totalRevenue || 0);
-  totalOrdersEl.textContent = summary.totalOrders || 0;
-  paidOrdersEl.textContent = summary.paidOrders || 0;
-  usedTicketsEl.textContent = summary.usedTickets || 0;
+    const summary = data.summary || {};
+    totalRevenueEl.textContent = formatCurrency(summary.totalRevenue || 0);
+    totalOrdersEl.textContent = summary.totalOrders || 0;
+    paidOrdersEl.textContent = summary.paidOrders || 0;
+    usedTicketsEl.textContent = summary.usedTickets || 0;
+
+    window.proofImagesMap = window.proofImagesMap || {};
 
     ordersTableBody.innerHTML = (data.orders || [])
     .map((order) => {
@@ -70,22 +72,51 @@ async function loadOrders() {
       const confirmButton = order.status !== 'Đã thanh toán'
         ? `<button type="button" class="btn btn-small confirm-payment" data-order-code="${order.orderCode}">Xác nhận</button>`
         : '';
+
       const rawProofUrl = typeof order.proofImage === 'string' ? order.proofImage.trim() : '';
-      const isSafeProofUrl = rawProofUrl.startsWith('data:image/') || /^https?:\/\//i.test(rawProofUrl);
-      const proofImage = isSafeProofUrl
-        ? `<a class="proof-link" href="${encodeURI(rawProofUrl)}" target="_blank" rel="noopener noreferrer">Mở ảnh</a>`
-        : '<span>—</span>';
+      const hasProof = rawProofUrl.startsWith('data:image/') || /^https?:\/\//i.test(rawProofUrl);
+
+      if (hasProof) {
+        window.proofImagesMap[order.orderCode] = rawProofUrl;
+      }
+
+      const proofImageHtml = hasProof
+        ? `<div class="proof-cell">
+             <img src="${rawProofUrl}" class="proof-mini-thumb" data-view-proof="${order.orderCode}" alt="Thumb" title="Bấm để phóng to" />
+             <button type="button" class="btn-view-proof" data-view-proof="${order.orderCode}">Xem ảnh</button>
+           </div>`
+        : '<span class="text-muted" style="color: var(--muted); font-size: 0.85rem;">—</span>';
+
+      let emailStatusHtml = '';
+      if (order.status === 'Đã thanh toán') {
+        if (order.emailSent) {
+          emailStatusHtml = '<div class="email-status success" title="Email QR check-in đã gửi">✉ Đã gửi mail</div>';
+        } else if (order.emailError) {
+          emailStatusHtml = `
+            <div class="email-status fail" title="${order.emailError.replace(/"/g, '&quot;')}">⚠ Lỗi gửi mail</div>
+            <button type="button" class="btn-resend-email" data-resend-order="${order.orderCode}">Gửi lại mail</button>
+          `;
+        } else {
+          emailStatusHtml = `
+            <div class="email-status" style="color: var(--muted);">Chưa gửi mail</div>
+            <button type="button" class="btn-resend-email" data-resend-order="${order.orderCode}">Gửi mail QR</button>
+          `;
+        }
+      }
 
       return `
         <tr>
-          <td>${order.orderCode}</td>
+          <td><strong>${order.orderCode}</strong></td>
           <td>${customerName}</td>
           <td>${phone}</td>
           <td><span class="delivery-badge ${deliveryBadgeClass}">${deliveryLocation}</span></td>
           <td>${itemsText || '—'}</td>
           <td>${formatCurrency(order.total || 0)}</td>
-          <td>${proofImage}</td>
-          <td><span class="badge ${statusClass}">${order.status}</span></td>
+          <td>${proofImageHtml}</td>
+          <td>
+            <span class="badge ${statusClass}">${order.status}</span>
+            ${emailStatusHtml}
+          </td>
           <td>
             <span class="badge ${ticketClass}">${order.ticketStatus || 'Chưa sử dụng'}</span>
             ${confirmButton}
@@ -206,11 +237,65 @@ async function confirmPendingPayment(orderCode) {
 }
 
 ordersTableBody.addEventListener('click', async (event) => {
-  const button = event.target.closest('.confirm-payment');
-  if (!button) return;
-  const orderCode = button.dataset.orderCode;
-  if (!orderCode) return;
-  await confirmPendingPayment(orderCode);
+  const confirmBtn = event.target.closest('.confirm-payment');
+  if (confirmBtn) {
+    const orderCode = confirmBtn.dataset.orderCode;
+    if (orderCode) await confirmPendingPayment(orderCode);
+    return;
+  }
+
+  const proofBtn = event.target.closest('[data-view-proof]');
+  if (proofBtn) {
+    const orderCode = proofBtn.dataset.viewProof;
+    const proofUrl = window.proofImagesMap ? window.proofImagesMap[orderCode] : null;
+    if (proofUrl) {
+      const modal = document.getElementById('imageModal');
+      const img = document.getElementById('modalImage');
+      if (modal && img) {
+        img.src = proofUrl;
+        modal.style.display = 'flex';
+      }
+    }
+    return;
+  }
+
+  const resendBtn = event.target.closest('.btn-resend-email');
+  if (resendBtn) {
+    const orderCode = resendBtn.dataset.resendOrder;
+    if (!orderCode) return;
+    try {
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Đang gửi...';
+      const res = await fetch('/api/admin/resend-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderCode })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gửi lại email thất bại');
+      alert('Đã gửi lại email QR check-in thành công!');
+      await loadOrders();
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Không thể gửi email'));
+    } finally {
+      resendBtn.disabled = false;
+      resendBtn.textContent = 'Gửi lại mail';
+    }
+  }
+});
+
+const imageModal = document.getElementById('imageModal');
+const closeImageModalBtn = document.getElementById('closeImageModal');
+const imageModalBackdrop = document.getElementById('imageModalBackdrop');
+
+function closeImageLightbox() {
+  if (imageModal) imageModal.style.display = 'none';
+}
+
+if (closeImageModalBtn) closeImageModalBtn.addEventListener('click', closeImageLightbox);
+if (imageModalBackdrop) imageModalBackdrop.addEventListener('click', closeImageLightbox);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeImageLightbox();
 });
 
 function stopScanner() {

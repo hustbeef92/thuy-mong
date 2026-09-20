@@ -496,3 +496,33 @@ test('Resend uses testing address when customer email is example.com and test em
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test('POST /api/orders/:orderCode/proof saves proof image and updates status', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const created = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách up proof', phone: '0901234567', email: 'proof@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(created.status, 201);
+    const orderCode = created.json.order.orderCode;
+
+    const proofRes = await request(global.fetch, 'POST', `/api/orders/${orderCode}/proof`, {
+      proofImage: 'data:image/jpeg;base64,sampleproofimagecontent'
+    }, port);
+
+    assert.equal(proofRes.status, 200);
+    assert.equal(proofRes.json.order.orderCode, orderCode);
+    assert.ok(proofRes.json.order.proofUploadedAt);
+
+    const statusRes = await request(global.fetch, 'GET', `/api/orders/${orderCode}/status?email=proof%40example.com`, null, port);
+    assert.equal(statusRes.status, 200);
+    assert.equal(statusRes.json.order.proofImage, 'data:image/jpeg;base64,sampleproofimagecontent');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+

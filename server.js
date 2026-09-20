@@ -550,6 +550,33 @@ app.get('/api/orders/:orderCode/status', async (req, res) => {
   });
 });
 
+app.post('/api/orders/:orderCode/proof', async (req, res) => {
+  const { orderCode } = req.params;
+  const { proofImage } = req.body || {};
+
+  if (!proofImage || typeof proofImage !== 'string' || !proofImage.trim()) {
+    return res.status(400).json({ message: 'Vui lòng chọn ảnh chụp biên lai hợp lệ.' });
+  }
+
+  const order = await findOrderPersistent(orderCode);
+  if (!order) {
+    return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+  }
+
+  order.proofImage = proofImage.trim();
+  order.proofUploadedAt = new Date().toISOString();
+  await saveOrderPersistent(order);
+
+  return res.status(200).json({
+    message: 'Tải ảnh biên lai thành công!',
+    order: {
+      orderCode: order.orderCode,
+      proofImage: order.proofImage,
+      proofUploadedAt: order.proofUploadedAt
+    }
+  });
+});
+
 function normalizeGoogleSheetRecord(row = {}) {
   const values = row && typeof row === 'object' ? row : {};
   const orderCode = String(values.orderCode || values.order_code || values['Mã đơn'] || values['order'] || values.reference || values.content || values.transferContent || values['Nội dung'] || '').trim();
@@ -700,7 +727,7 @@ async function confirmOrderPaid(orderCode) {
 
 app.get('/api/admin/orders', async (req, res) => {
   const { status, search } = req.query;
-  const allOrders = readOrders();
+  const allOrders = await readOrdersPersistent();
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesStatus = !status || status === 'all' || order.status === status;
