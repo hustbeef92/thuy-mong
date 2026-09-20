@@ -9,6 +9,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="stylesheet" href="/assets/admin.css" />
+    <script>
+      const password = prompt("Vui lòng nhập mật khẩu trang quản trị:");
+      if (password !== "madebyhust") {
+        window.location.href = "/";
+      }
+    </script>
   </head>
   <body class="admin-body">
     <div class="admin-shell">
