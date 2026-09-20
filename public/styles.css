@@ -272,10 +272,10 @@ small {
 }
 
 .stats-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 28px;
-  max-width: 460px;
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  max-width: 520px;
   margin-top: 34px;
   padding-top: 18px;
   border-top: 1px solid rgba(241, 198, 110, 0.2);
@@ -288,9 +288,10 @@ small {
 }
 
 .stats-row strong {
-  font-size: clamp(1.7rem, 2vw, 2.2rem);
+  font-size: clamp(1.2rem, 3.2vw, 2.2rem);
   color: var(--gold-soft);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .stats-row span {
@@ -298,6 +299,7 @@ small {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.58rem;
+  white-space: nowrap;
 }
 
 .hero-visual {
@@ -1388,9 +1390,16 @@ body .add-to-cart:hover {
   }
 
   .stats-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
     max-width: 100%;
+  }
+
+  .stats-row strong {
+    font-size: clamp(1.1rem, 4.2vw, 1.45rem);
+    white-space: nowrap;
   }
 
   .ticket-card,
