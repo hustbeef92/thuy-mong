@@ -15,6 +15,28 @@ const DATA_DIR = process.env.VERCEL
   ? path.join('/tmp', 'thuy-mong-data')
   : path.join(__dirname, 'data');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+const ITEMS_FILE = path.join(__dirname, 'data', 'items.json');
+
+function readItems() {
+  try {
+    if (fs.existsSync(ITEMS_FILE)) {
+      return JSON.parse(fs.readFileSync(ITEMS_FILE, 'utf8'));
+    }
+  } catch (error) {
+    console.error('Error reading items:', error.message);
+  }
+  return [];
+}
+
+function saveItems(items) {
+  try {
+    fs.writeFileSync(ITEMS_FILE, JSON.stringify(items, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving items:', error.message);
+    return false;
+  }
+}
 
 const BUNDLED_ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 if (!fs.existsSync(DATA_DIR)) {
@@ -191,37 +213,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/assets', express.static(path.join(__dirname, 'public')));
 
-const ticketTypes = [
-  {
-    id: 'sao-may',
-    name: 'Sào Mây',
-    price: 130000,
-    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
-  },
-  {
-    id: 'thanh-la',
-    name: 'Thanh La',
-    price: 160000,
-    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
-  },
-  {
-    id: 'y-mon',
-    name: 'Y môn',
-    price: 200000,
-    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
-  },
-  {
-    id: 'tu-linh',
-    name: 'Tứ Linh',
-    price: 300000,
-    benefit: 'Nhận voucher giảm 15% khi mua khăn độc quyền của sự kiện và tặng 01 combo merch.'
-  }
-];
-
-const merchItems = [
-  { id: 'combo-merch', name: 'Combo merch (Quạt, Móc khóa, Sticker)', price: 150000 },
-  { id: 'khan', name: 'Khăn độc quyền sự kiện', price: 120000 }
-];
+// Danh sách mặt hàng (vé, merch) nay được tải động từ data/items.json thông qua hàm readItems()
 
 function generateOrderCode() {
   return `TM-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
@@ -529,7 +521,28 @@ async function sendResendEmail(order) {
   return response.json();
 }
 
+// API Quản lý Mặt Hàng (Admin)
+app.get('/api/admin/items', (req, res) => {
+  res.json(readItems());
+});
+
+app.post('/api/admin/items', (req, res) => {
+  const items = req.body;
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ message: 'Dữ liệu không hợp lệ.' });
+  }
+  if (saveItems(items)) {
+    res.json({ message: 'Đã lưu danh sách mặt hàng!', items });
+  } else {
+    res.status(500).json({ message: 'Lỗi khi lưu dữ liệu.' });
+  }
+});
+
 app.get('/api/config', (req, res) => {
+  const allItems = readItems();
+  const ticketTypes = allItems.filter(i => i.type === 'ticket');
+  const merchItems = allItems.filter(i => i.type === 'merch');
+
   res.json({
     eventName: 'Thủy Mộng',
     eventDate: '2026-10-17',
@@ -1128,6 +1141,52 @@ app.post('/api/orders/:orderCode/resend-email', async (req, res) => {
     return res.status(502).json({ message: 'Gửi lại email thất bại.', error: error.message, order });
   }
 });
+
+// API Quản lý mặt hàng (Items)
+app.get('/api/admin/items', (req, res) => {
+  const items = readItems();
+  res.json(items);
+});
+
+app.post('/api/admin/items', (req, res) => {
+  const newItem = req.body;
+  if (!newItem || !newItem.id || !newItem.name) {
+    return res.status(400).json({ error: 'Thiếu thông tin bắt buộc (id, name).' });
+  }
+  
+  let items = readItems();
+  const index = items.findIndex(i => i.id === newItem.id);
+  
+  if (index !== -1) {
+    items[index] = { ...items[index], ...newItem };
+  } else {
+    items.push(newItem);
+  }
+  
+  if (saveItems(items)) {
+    res.json({ success: true, item: newItem });
+  } else {
+    res.status(500).json({ error: 'Không thể lưu mặt hàng.' });
+  }
+});
+
+app.delete('/api/admin/items/:id', (req, res) => {
+  const id = req.params.id;
+  let items = readItems();
+  const initialLength = items.length;
+  items = items.filter(i => i.id !== id);
+  
+  if (items.length === initialLength) {
+    return res.status(404).json({ error: 'Không tìm thấy mặt hàng.' });
+  }
+  
+  if (saveItems(items)) {
+    res.json({ success: true, message: 'Đã xóa mặt hàng.' });
+  } else {
+    res.status(500).json({ error: 'Lỗi khi lưu dữ liệu.' });
+  }
+});
+
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));

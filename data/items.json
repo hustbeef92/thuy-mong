@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sao-may",
+    "name": "Sào Mây",
+    "price": 130000,
+    "benefit": "Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.",
+    "type": "ticket",
+    "image": ""
+  },
+  {
+    "id": "thanh-la",
+    "name": "Thanh La",
+    "price": 160000,
+    "benefit": "Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.",
+    "type": "ticket",
+    "image": ""
+  },
+  {
+    "id": "y-mon",
+    "name": "Y môn",
+    "price": 200000,
+    "benefit": "Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.",
+    "type": "ticket",
+    "image": ""
+  },
+  {
+    "id": "tu-linh",
+    "name": "Tứ Linh",
+    "price": 300000,
+    "benefit": "Nhận voucher giảm 15% khi mua khăn độc quyền của sự kiện và tặng 01 combo merch.",
+    "type": "ticket",
+    "image": ""
+  },
+  {
+    "id": "combo-merch",
+    "name": "Combo merch (Quạt, Móc khóa, Sticker)",
+    "price": 150000,
+    "benefit": "",
+    "type": "merch",
+    "image": ""
+  },
+  {
+    "id": "khan",
+    "name": "Khăn độc quyền sự kiện",
+    "price": 120000,
+    "benefit": "",
+    "type": "merch",
+    "image": ""
+  }
+]

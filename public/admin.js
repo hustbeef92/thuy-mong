@@ -363,5 +363,195 @@ manualCheckinForm.addEventListener('submit', async (event) => {
   manualQrCodeInput.value = '';
 });
 
+// Navigation logic
+const navLinks = document.querySelectorAll('.admin-nav a');
+const sections = {
+  '#overview': document.getElementById('overview'),
+  '#orders': document.getElementById('orders'),
+  '#items': document.getElementById('items'),
+  '#scanner': document.getElementById('scanner')
+};
+
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    const targetId = link.getAttribute('href');
+    if (!sections[targetId]) return;
+    
+    e.preventDefault();
+    
+    // Update active state
+    navLinks.forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    
+    // Show target section, hide others
+    Object.keys(sections).forEach(id => {
+      if (sections[id]) {
+        sections[id].style.display = id === targetId ? (id === '#overview' ? 'grid' : 'block') : 'none';
+      }
+    });
+
+    if (targetId === '#items') {
+      loadItems();
+    }
+  });
+});
+
+// --- Item Management Logic ---
+const itemsTableBody = document.getElementById('itemsTableBody');
+const itemModal = document.getElementById('itemModal');
+const itemModalBackdrop = document.getElementById('itemModalBackdrop');
+const addItemBtn = document.getElementById('addItemBtn');
+const closeItemModalBtn = document.getElementById('closeItemModalBtn');
+const itemForm = document.getElementById('itemForm');
+const itemImageInput = document.getElementById('itemImage');
+
+let currentEditingItemId = null;
+
+function closeItemModal() {
+  itemModal.style.display = 'none';
+  itemModalBackdrop.style.display = 'none';
+  itemForm.reset();
+  currentEditingItemId = null;
+}
+
+addItemBtn.addEventListener('click', () => {
+  currentEditingItemId = null;
+  itemForm.reset();
+  itemModal.style.display = 'block';
+  itemModalBackdrop.style.display = 'block';
+});
+
+closeItemModalBtn.addEventListener('click', closeItemModal);
+itemModalBackdrop.addEventListener('click', closeItemModal);
+
+async function loadItems() {
+  try {
+    const res = await fetch('/api/admin/items');
+    if (!res.ok) throw new Error('Không thể tải mặt hàng');
+    const items = await res.json();
+    
+    itemsTableBody.innerHTML = items.map(item => `
+      <tr>
+        <td>
+          ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />` : '<div style="width: 50px; height: 50px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888;">No IMG</div>'}
+        </td>
+        <td><strong>${item.name}</strong><br/><small style="color: #666;">Kho: ${item.quantity !== undefined && item.quantity !== null ? item.quantity : 'Vô hạn'}</small></td>
+        <td><code>${item.id}</code></td>
+        <td>${item.type === 'ticket' ? 'Vé (Ticket)' : 'Ấn phẩm (Merch)'}</td>
+        <td>${formatCurrency(item.price)}</td>
+        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.benefit || ''}">
+          ${item.benefit || '—'}
+        </td>
+        <td>
+          <button class="btn btn-outline edit-item-btn" data-id="${item.id}" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;">Sửa</button>
+          <button class="btn btn-outline delete-item-btn" data-id="${item.id}" style="padding: 4px 8px; font-size: 12px; color: #dc2626; border-color: #fca5a5;">Xóa</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="7">Chưa có mặt hàng nào.</td></tr>';
+
+    // Add edit event listeners
+    document.querySelectorAll('.edit-item-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const item = items.find(i => i.id === id);
+        if (item) {
+          currentEditingItemId = item.id;
+          document.getElementById('itemName').value = item.name;
+          document.getElementById('itemId').value = item.id;
+          document.getElementById('itemType').value = item.type;
+          document.getElementById('itemPrice').value = item.price;
+          document.getElementById('itemBenefit').value = item.benefit || '';
+          document.getElementById('itemQuantity').value = item.quantity !== undefined && item.quantity !== null ? item.quantity : '';
+          
+          itemModal.style.display = 'block';
+          itemModalBackdrop.style.display = 'block';
+        }
+      });
+    });
+
+    // Add delete event listeners
+    document.querySelectorAll('.delete-item-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        if (confirm(`Bạn có chắc muốn xóa mặt hàng "${id}"?`)) {
+          try {
+            const res = await fetch(`/api/admin/items/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Xóa thất bại');
+            loadItems();
+          } catch (e) {
+            alert(e.message);
+          }
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error(err);
+    itemsTableBody.innerHTML = `<tr><td colspan="7">Lỗi tải mặt hàng: ${err.message}</td></tr>`;
+  }
+}
+
+itemForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const submitBtn = itemForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang lưu...';
+  
+  try {
+    const newItem = {
+      id: document.getElementById('itemId').value.trim(),
+      name: document.getElementById('itemName').value.trim(),
+      type: document.getElementById('itemType').value,
+      price: Number(document.getElementById('itemPrice').value),
+      benefit: document.getElementById('itemBenefit').value.trim()
+    };
+
+    const qtyStr = document.getElementById('itemQuantity').value.trim();
+    if (qtyStr !== '') {
+      newItem.quantity = Number(qtyStr);
+    }
+
+    // Convert image to Base64 if uploaded
+    if (itemImageInput.files && itemImageInput.files[0]) {
+      const file = itemImageInput.files[0];
+      const reader = new FileReader();
+      const base64Promise = new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      newItem.image = await base64Promise;
+    } else if (currentEditingItemId) {
+      // Retain old image if editing and no new image
+      const res = await fetch('/api/admin/items');
+      const items = await res.json();
+      const oldItem = items.find(i => i.id === currentEditingItemId);
+      if (oldItem && oldItem.image) {
+        newItem.image = oldItem.image;
+      }
+    }
+
+    const res = await fetch('/api/admin/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Không thể lưu mặt hàng');
+    }
+
+    closeItemModal();
+    loadItems();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Lưu mặt hàng';
+  }
+});
+
 loadOrders();
-setInterval(loadOrders, 5000);
+// setInterval(loadOrders, 5000);
