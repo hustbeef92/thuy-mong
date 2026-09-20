@@ -92,6 +92,9 @@ function startPaymentStatusPolling(orderCode, email) {
       if (result.order.status === 'Đã thanh toán') {
         clearInterval(appState.paymentPollTimer);
         showToast('Đã nhận thanh toán và cập nhật trạng thái đơn hàng.');
+        appState.cart = [];
+        renderCart();
+        updateCartButton();
       }
     } catch (error) {
       console.warn('Unable to refresh payment status:', error);
@@ -547,6 +550,10 @@ checkoutForm.addEventListener('submit', async (event) => {
             proofStatusMsg.textContent = '✓ Bạn đã báo Đã thanh toán! Ban tổ chức sẽ kiểm tra và xác nhận sớm.';
             proofStatusMsg.style.color = '#2da76d';
             showToast('Đã gửi xác nhận thanh toán!');
+            
+            appState.cart = [];
+            renderCart();
+            updateCartButton();
           } catch (err) {
             proofStatusMsg.textContent = 'Lỗi: ' + (err.message || 'Không thể xác nhận');
             proofStatusMsg.style.color = '#e74c3c';
@@ -560,9 +567,6 @@ checkoutForm.addEventListener('submit', async (event) => {
     }
     startPaymentStatusPolling(result.order.orderCode, result.order.customer.email || '');
     showToast('Đơn hàng đã tạo. Vui lòng quét QR để thanh toán.');
-    appState.cart = [];
-    renderCart();
-    updateCartButton();
     document.getElementById('checkout').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
     showToast(error.message || 'Có lỗi xảy ra khi đặt vé.');
