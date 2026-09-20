@@ -60,22 +60,37 @@ function renderPaidOrderStatus(order) {
   if (!paymentInfoEl) return;
 
   if (order.status === 'Đã thanh toán') {
+    const qrMarkup = order.qrCodeUrl
+      ? `<img class="payment-qr checkin-qr" src="${order.qrCodeUrl}" alt="QR check-in đơn ${order.orderCode}" />`
+      : '';
+
     paymentInfoEl.innerHTML = `
-      <h4>Đã thanh toán thành công</h4>
-      <p class="payment-success">Hệ thống đã nhận được khoản chuyển khoản của bạn.</p>
-      ${order.qrCodeUrl ? `<img class="payment-qr checkin-qr" src="${order.qrCodeUrl}" alt="QR check-in đơn ${order.orderCode}" />` : ''}
-      <p><strong>Mã đơn hàng:</strong> ${order.orderCode}</p>
-      <p><strong>Trạng thái vé:</strong> ${order.ticketStatus}</p>
-      <p>${order.emailSent ? 'QR check-in đã được gửi tới email của bạn.' : 'Email đang được xử lý, vui lòng kiểm tra lại sau ít phút.'}</p>
+      <div class="payment-success-box">
+        <h4>Đã thanh toán thành công</h4>
+        <p class="payment-success">Hệ thống đã nhận được khoản chuyển khoản của bạn.</p>
+        ${qrMarkup}
+        <p><strong>Mã đơn hàng:</strong> ${order.orderCode}</p>
+        <p><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
+        <p><strong>Trạng thái vé:</strong> ${order.ticketStatus || 'Chưa sử dụng'}</p>
+        <p>QR check-in đã hiển thị trực tiếp trên màn hình. Bạn có thể in hoặc lưu lại để dùng khi vào sự kiện.</p>
+        ${order.qrCodeUrl ? '<button type="button" class="btn btn-primary full-width" id="print-checkin-qr">In QR check-in</button>' : ''}
+      </div>
     `;
+
+    const printButton = document.getElementById('print-checkin-qr');
+    if (printButton) {
+      printButton.addEventListener('click', () => window.print());
+    }
   }
 }
 
 function startPaymentStatusPolling(orderCode, email) {
   clearInterval(appState.paymentPollTimer);
+  const query = email ? `?email=${encodeURIComponent(email)}` : '';
+
   const checkStatus = async () => {
     try {
-      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status${query}`);
       if (!response.ok) return;
       const result = await response.json();
       renderPaidOrderStatus(result.order);
@@ -98,13 +113,13 @@ function renderTickets() {
     .map((ticket) => `
       <article class="ticket-card">
         <div class="ticket-top">
-          <h3>${ticket.name}</h3>
+          <h3>${ticket.name} (${formatCurrency(ticket.price)})</h3>
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
         </div>
         <p>${ticket.benefit}</p>
         <ul class="benefits-list">
-          <li>Đảm bảo quyền lợi theo hạng vé</li>
-          <li>Trải nghiệm nghệ thuật tối ưu</li>
+          <li>Nhận quyền lợi theo hạng vé</li>
+          <li>Đăng ký từ 4 ấn phẩm trở lên được giảm 10%</li>
         </ul>
         <div class="choose-row">
           <div class="qty-control">
@@ -127,12 +142,12 @@ function renderMerch() {
   container.innerHTML = appState.merch
     .map((item) => `
       <article class="merch-card">
-        <div class="merch-art" aria-hidden="true">${item.id === 'shirt' ? 'ÁO' : item.id === 'bag' ? 'TÚI' : item.id === 'fan' ? 'QUẠT' : 'RỐI'}</div>
+        <div class="merch-art" aria-hidden="true">${item.id === 'combo-merch' ? 'COMBO' : 'KHĂN'}</div>
         <div class="ticket-top">
-          <h3>${item.name}</h3>
+          <h3>${item.name} (${formatCurrency(item.price)})</h3>
           <span class="ticket-price">${formatCurrency(item.price)}</span>
         </div>
-        <p>${item.id === 'shirt' ? 'Áo cotton in họa tiết chú Tễu và sóng nước, mực vàng kim.' : item.id === 'bag' ? 'Túi canvas dày dặn in họa tiết thủy đình dưới trăng.' : item.id === 'fan' ? 'Quạt giấy vẽ tay phong cách tranh Đông Hồ, nan tre.' : 'Móc khóa hình con rối nước, hoàn thiện sơn mài.'}</p>
+        <p>${item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.'}</p>
         <div class="choose-row">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
@@ -195,6 +210,63 @@ function bindAddButtons(container) {
   });
 }
 
+function calculateCartDiscountSummary(items = []) {
+  const normalizedItems = Array.isArray(items) ? items.map((item) => ({
+    id: String(item.id || ''),
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 0,
+    type: String(item.type || 'ticket')
+  })) : [];
+
+  const ticketItems = normalizedItems.filter((item) => item.type === 'ticket');
+  const merchItems = normalizedItems.filter((item) => item.type === 'merch');
+  const ticketCount = ticketItems.reduce((sum, item) => sum + item.quantity, 0);
+  const ticketTierIds = new Set(ticketItems.map((item) => item.id));
+  const hasValueTicket = ticketTierIds.has('sao-may') || ticketTierIds.has('thanh-la') || ticketTierIds.has('y-mon');
+  const hasTuLinh = ticketTierIds.has('tu-linh');
+  const khanItem = merchItems.find((item) => item.id === 'khan');
+  const comboItem = merchItems.find((item) => item.id === 'combo-merch');
+
+  let subtotal = normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discounts = [];
+
+  if (ticketCount >= 4) {
+    const ticketSubtotal = ticketItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discountAmount = ticketSubtotal * 0.1;
+    discounts.push({
+      label: 'Giảm 10% cho ấn phẩm tham dự sự kiện (từ 4 vé trở lên)',
+      amount: discountAmount
+    });
+    subtotal -= discountAmount;
+  }
+
+  if ((hasValueTicket || hasTuLinh) && khanItem) {
+    const rate = hasTuLinh ? 0.15 : 0.05;
+    const discountAmount = khanItem.price * khanItem.quantity * rate;
+    discounts.push({
+      label: hasTuLinh ? 'Giảm 15% khi mua khăn độc quyền cho Tứ Linh' : 'Giảm 5% khi mua khăn độc quyền',
+      amount: discountAmount
+    });
+    subtotal -= discountAmount;
+  }
+
+  if (hasTuLinh && comboItem) {
+    const discountAmount = comboItem.price * comboItem.quantity;
+    discounts.push({
+      label: 'Tặng 01 combo merch khi mua Tứ Linh',
+      amount: discountAmount
+    });
+    subtotal -= discountAmount;
+  }
+
+  return {
+    subtotal: Math.max(0, subtotal + (discounts.reduce((sum, item) => sum + item.amount, 0))),
+    discountTotal: discounts.reduce((sum, item) => sum + item.amount, 0),
+    total: Math.max(0, subtotal),
+    discounts
+  };
+}
+
 function renderCart() {
   const cartItemsEl = document.getElementById('cart-items');
   const totalEl = document.getElementById('total-price');
@@ -205,6 +277,8 @@ function renderCart() {
     updateCartButton();
     return;
   }
+
+  const summary = calculateCartDiscountSummary(appState.cart);
 
   cartItemsEl.innerHTML = appState.cart
     .map((item) => `
@@ -223,8 +297,21 @@ function renderCart() {
     `)
     .join('');
 
-  const total = appState.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  totalEl.textContent = `${formatCurrency(total)}`;
+  const discountMarkup = summary.discounts.length
+    ? `
+      <div class="discount-summary">
+        <div class="discount-row"><span>Giá gốc</span><strong>${formatCurrency(summary.subtotal)}</strong></div>
+        ${summary.discounts.map((discount) => `
+          <div class="discount-row discount-line"><span>${discount.label}</span><strong>- ${formatCurrency(discount.amount)}</strong></div>
+        `).join('')}
+        <div class="discount-row total-line"><span>Tổng thanh toán</span><strong>${formatCurrency(summary.total)}</strong></div>
+      </div>
+    `
+    : '';
+
+  cartItemsEl.insertAdjacentHTML('beforeend', discountMarkup);
+  totalEl.textContent = formatCurrency(summary.total);
+  totalEl.title = summary.discounts.map((discount) => `${discount.label}: -${formatCurrency(discount.amount)}`).join(' | ') || 'Không có ưu đãi';
   updateCartButton();
   document.querySelectorAll('[data-cart-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -259,17 +346,17 @@ async function loadData() {
     console.error('Failed to load data:', error);
 
     appState.tickets = [
-      { id: 'pt', name: 'Vé Phổ Thông', price: 100000, benefit: 'Ghế khu vực tầng chính, tầm nhìn tiêu chuẩn, thưởng thức trọn vẹn suất diễn múa rối nước.' },
-      { id: 'tc', name: 'Vé Tiêu Chuẩn', price: 130000, benefit: 'Ghế vị trí trung tâm rõ hơn, tặng kèm 01 quạt giấy lưu niệm thiết kế độc quyền sự kiện.' },
-      { id: 'cc', name: 'Vé Cao Cấp', price: 160000, benefit: 'Ghế cận sân khấu view đẹp, tặng kèm 01 túi vải canvas "Thủy Mộng" và móc khóa nghệ thuật.' },
-      { id: 'vip', name: 'Vé VIP', price: 200000, benefit: 'Ghế hàng đầu sát mặt nước, đặc quyền check-in lối đi riêng, nhận trọn bộ quà tặng và thư cảm ơn độc quyền.' }
+      { id: 'pt', name: 'Vé Phổ Thông', price: 1000, benefit: 'Ghế khu vực tầng chính, tầm nhìn tiêu chuẩn, thưởng thức trọn vẹn suất diễn múa rối nước.' },
+      { id: 'tc', name: 'Vé Tiêu Chuẩn', price: 1000, benefit: 'Ghế vị trí trung tâm rõ hơn, tặng kèm 01 quạt giấy lưu niệm thiết kế độc quyền sự kiện.' },
+      { id: 'cc', name: 'Vé Cao Cấp', price: 1000, benefit: 'Ghế cận sân khấu view đẹp, tặng kèm 01 túi vải canvas "Thủy Mộng" và móc khóa nghệ thuật.' },
+      { id: 'vip', name: 'Vé VIP', price: 1000, benefit: 'Ghế hàng đầu sát mặt nước, đặc quyền check-in lối đi riêng, nhận trọn bộ quà tặng và thư cảm ơn độc quyền.' }
     ];
 
     appState.merch = [
-      { id: 'shirt', name: 'Áo thun Thủy Mộng', price: 240000 },
-      { id: 'bag', name: 'Túi vải canvas Thủy Mộng', price: 180000 },
-      { id: 'keychain', name: 'Móc khóa nghệ thuật', price: 65000 },
-      { id: 'fan', name: 'Quạt giấy lưu niệm', price: 50000 }
+      { id: 'shirt', name: 'Áo thun Thủy Mộng', price: 1000 },
+      { id: 'bag', name: 'Túi vải canvas Thủy Mộng', price: 1000 },
+      { id: 'keychain', name: 'Móc khóa nghệ thuật', price: 1000 },
+      { id: 'fan', name: 'Quạt giấy lưu niệm', price: 1000 }
     ];
 
     renderTickets();
@@ -289,6 +376,50 @@ scrollButtons.forEach((button) => {
 });
 
 const checkoutForm = document.getElementById('checkout-form');
+const paymentProofInput = document.getElementById('payment-proof-input');
+
+async function readPaymentProofAsDataUrl(file) {
+  if (!file) return '';
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const image = new Image();
+        image.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxWidth = 1200;
+          const maxHeight = 1200;
+          let { width, height } = image;
+
+          if (width > maxWidth || height > maxHeight) {
+            const scale = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(image, 0, 0, width, height);
+
+          const compressed = canvas.toDataURL('image/jpeg', 0.72);
+          resolve(String(compressed || ''));
+        };
+        image.onerror = () => reject(new Error('Không đọc được ảnh chuyển khoản.'));
+        image.src = String(reader.result || '');
+      } catch (error) {
+        reject(new Error('Không đọc được ảnh chuyển khoản.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Không đọc được ảnh chuyển khoản.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 checkoutForm.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -298,13 +429,26 @@ checkoutForm.addEventListener('submit', async (event) => {
   }
 
   const formData = new FormData(checkoutForm);
+  let proofImage = '';
+
+  try {
+    if (paymentProofInput && paymentProofInput.files && paymentProofInput.files[0]) {
+      proofImage = await readPaymentProofAsDataUrl(paymentProofInput.files[0]);
+    }
+  } catch (error) {
+    showToast(error.message || 'Không thể đọc ảnh thanh toán.');
+    return;
+  }
+
   const payload = {
     customer: {
       name: formData.get('name'),
       phone: formData.get('phone'),
-      email: formData.get('email')
+      email: formData.get('email') || ''
     },
+    deliveryLocation: formData.get('deliveryLocation') || 'Nhận tại sự kiện',
     paymentMethod: 'BANK',
+    proofImage,
     cart: {
       items: appState.cart.map((item) => ({
         id: item.id,
@@ -338,10 +482,10 @@ checkoutForm.addEventListener('submit', async (event) => {
         <p><strong>Số tiền:</strong> ${formatCurrency(result.order.total)}</p>
         <p><strong>Nội dung chuyển khoản:</strong> ${payment.transferContent}</p>
         <p><strong>Ngân hàng:</strong> ${payment.bankName} · <strong>STK:</strong> ${payment.accountNumber}</p>
-        <p class="payment-note">Sau khi chuyển khoản thành công, hệ thống sẽ xác nhận và gửi QR check-in vào email của bạn.</p>
+        <p class="payment-note">Sau khi chuyển khoản thành công, hệ thống sẽ tự động xác nhận thanh toán và hiển thị QR check-in ngay trên màn hình cho bạn.</p>
       `;
     }
-    startPaymentStatusPolling(result.order.orderCode, result.order.customer.email);
+    startPaymentStatusPolling(result.order.orderCode, result.order.customer.email || '');
     showToast('Đơn hàng đã tạo. Vui lòng quét QR để thanh toán.');
     appState.cart = [];
     renderCart();

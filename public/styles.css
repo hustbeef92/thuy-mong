@@ -272,9 +272,9 @@ small {
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
-  gap: 24px;
-  max-width: 610px;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 28px;
+  max-width: 460px;
   margin-top: 34px;
   padding-top: 18px;
   border-top: 1px solid rgba(241, 198, 110, 0.2);

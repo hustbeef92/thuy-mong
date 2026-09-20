@@ -29,8 +29,11 @@ function readOrders() {
   }
 }
 
+const MAX_STORED_ORDERS = 700;
+
 function writeOrders(orders) {
-  fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2), 'utf8');
+  const limitedOrders = Array.isArray(orders) ? orders.slice(-MAX_STORED_ORDERS) : [];
+  fs.writeFileSync(ORDERS_FILE, JSON.stringify(limitedOrders, null, 2), 'utf8');
 }
 
 function findOrderByCode(code) {
@@ -45,7 +48,8 @@ function saveOrder(order) {
   } else {
     orders.push(order);
   }
-  writeOrders(orders);
+  const trimmedOrders = orders.slice(-MAX_STORED_ORDERS);
+  writeOrders(trimmedOrders);
   return order;
 }
 
@@ -164,36 +168,34 @@ app.use('/assets', express.static(path.join(__dirname, 'public')));
 
 const ticketTypes = [
   {
-    id: 'pt',
-    name: 'Vé Phổ Thông',
-    price: 100000,
-    benefit: 'Ghế khu vực tầng chính, tầm nhìn tiêu chuẩn, thưởng thức trọn vẹn suất diễn múa rối nước.'
-  },
-  {
-    id: 'tc',
-    name: 'Vé Tiêu Chuẩn',
+    id: 'sao-may',
+    name: 'Sào Mây',
     price: 130000,
-    benefit: 'Ghế vị trí trung tâm rõ hơn, tặng kèm 01 quạt giấy lưu niệm thiết kế độc quyền sự kiện.'
+    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
   },
   {
-    id: 'cc',
-    name: 'Vé Cao Cấp',
+    id: 'thanh-la',
+    name: 'Thanh La',
     price: 160000,
-    benefit: 'Ghế cận sân khấu view đẹp, tặng kèm 01 túi vải canvas "Thủy Mộng" và móc khóa nghệ thuật.'
+    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
   },
   {
-    id: 'vip',
-    name: 'Vé VIP',
+    id: 'y-mon',
+    name: 'Y môn',
     price: 200000,
-    benefit: 'Ghế hàng đầu sát mặt nước, đặc quyền check-in lối đi riêng, nhận trọn bộ quà tặng (Áo thun, túi vải, móc khóa, quạt giấy) và thư cảm ơn độc quyền.'
+    benefit: 'Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.'
+  },
+  {
+    id: 'tu-linh',
+    name: 'Tứ Linh',
+    price: 300000,
+    benefit: 'Nhận voucher giảm 15% khi mua khăn độc quyền của sự kiện và tặng 01 combo merch.'
   }
 ];
 
 const merchItems = [
-  { id: 'shirt', name: 'Áo thun Thủy Mộng', price: 240000 },
-  { id: 'bag', name: 'Túi vải canvas Thủy Mộng', price: 180000 },
-  { id: 'keychain', name: 'Móc khóa nghệ thuật', price: 65000 },
-  { id: 'fan', name: 'Quạt giấy lưu niệm', price: 50000 }
+  { id: 'combo-merch', name: 'Combo merch (Quạt, Móc khóa, Sticker)', price: 150000 },
+  { id: 'khan', name: 'Khăn độc quyền sự kiện', price: 120000 }
 ];
 
 function generateOrderCode() {
@@ -201,11 +203,39 @@ function generateOrderCode() {
 }
 
 function calculateOrderTotal(items = []) {
-  return items.reduce((sum, item) => {
-    const unitPrice = Number(item.price) || 0;
-    const quantity = Number(item.quantity) || 0;
-    return sum + unitPrice * quantity;
-  }, 0);
+  const normalizedItems = Array.isArray(items) ? items.map((item) => ({
+    id: String(item.id || ''),
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 0,
+    type: String(item.type || 'ticket')
+  })) : [];
+
+  const ticketItems = normalizedItems.filter((item) => item.type === 'ticket');
+  const merchItems = normalizedItems.filter((item) => item.type === 'merch');
+  const ticketCount = ticketItems.reduce((sum, item) => sum + item.quantity, 0);
+  const ticketTierIds = new Set(ticketItems.map((item) => item.id));
+  const hasValueTicket = ticketTierIds.has('sao-may') || ticketTierIds.has('thanh-la') || ticketTierIds.has('y-mon');
+  const hasTuLinh = ticketTierIds.has('tu-linh');
+  const khanItem = merchItems.find((item) => item.id === 'khan');
+  const comboItem = merchItems.find((item) => item.id === 'combo-merch');
+
+  let subtotal = normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  if (ticketCount >= 4) {
+    const ticketSubtotal = ticketItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    subtotal -= ticketSubtotal * 0.1;
+  }
+
+  if ((hasValueTicket || hasTuLinh) && khanItem) {
+    const rate = hasTuLinh ? 0.15 : 0.05;
+    subtotal -= khanItem.price * khanItem.quantity * rate;
+  }
+
+  if (hasTuLinh && comboItem) {
+    subtotal -= comboItem.price * comboItem.quantity;
+  }
+
+  return Math.round(Math.max(0, subtotal));
 }
 
 function createQrCodeUrl(order) {
@@ -235,8 +265,22 @@ function getQrPayload(order) {
 function verifySePaySignature(body, signature) {
   const secret = process.env.SEPAY_WEBHOOK_SECRET;
   if (!secret || !signature) return true;
-  const expected = crypto.createHmac('sha256', secret).update(JSON.stringify(body)).digest('hex');
-  return expected === signature;
+
+  const normalized = body && typeof body === 'object' ? body : {};
+  const variants = [];
+
+  if (normalized.data && typeof normalized.data === 'object') {
+    variants.push(JSON.stringify(normalized.data));
+  }
+
+  variants.push(JSON.stringify(normalized));
+  variants.push(JSON.stringify({ ...normalized, data: undefined }));
+
+  const expected = variants
+    .map((value) => crypto.createHmac('sha256', secret).update(value).digest('hex'))
+    .includes(String(signature).trim());
+
+  return expected;
 }
 
 async function createSePayPayment(order) {
@@ -297,6 +341,20 @@ function decodeQrPayload(rawValue) {
   return orderCode;
 }
 
+function resolveResendRecipient(email) {
+  const rawEmail = String(email || '').trim().toLowerCase();
+  if (!rawEmail) return 'delivered@resend.dev';
+
+  const allowTestSend = String(process.env.RESEND_ALLOW_TEST_EMAIL || '').toLowerCase() === 'true';
+  const usesExampleDomain = rawEmail.endsWith('@example.com') || rawEmail.includes('example.com');
+
+  if (usesExampleDomain && allowTestSend) {
+    return process.env.RESEND_TEST_EMAIL || 'delivered@resend.dev';
+  }
+
+  return rawEmail;
+}
+
 async function sendResendEmail(order) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -306,14 +364,16 @@ async function sendResendEmail(order) {
 
   const qrCodeUrl = order.qrCodeUrl || createQrCodeUrl(order);
   const fromAddress = process.env.RESEND_FROM || 'Thủy Mộng <onboarding@resend.dev>';
+  const recipient = resolveResendRecipient(order.customer.email);
   const emailPayload = {
     from: fromAddress,
-    to: [order.customer.email],
+    to: [recipient],
     subject: `Xác nhận đặt vé Thủy Mộng - ${order.orderCode}`,
     html: `
       <h2>Xin chào ${order.customer.name},</h2>
       <p>Đơn hàng của bạn đã được xác nhận thanh toán thành công.</p>
       <p><strong>Mã đơn hàng:</strong> ${order.orderCode}</p>
+      <p><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
       <p><strong>Tổng tiền:</strong> ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total)}</p>
       <p><strong>Sự kiện:</strong> Thủy Mộng - 17/10/2026</p>
       <p><strong>QR Check-in:</strong></p>
@@ -393,8 +453,18 @@ app.get('/api/health', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
   const { customer, cart, paymentMethod } = req.body || {};
 
-  if (!customer || !cart || !Array.isArray(cart.items) || !customer.name || !customer.phone || !customer.email) {
+  if (!customer || !cart || !Array.isArray(cart.items) || !customer.name || !customer.phone) {
     return res.status(400).json({ message: 'Thiếu thông tin khách hàng hoặc giỏ hàng.' });
+  }
+
+  const normalizedCustomer = {
+    name: String(customer.name || '').trim(),
+    phone: String(customer.phone || '').trim(),
+    email: String(customer.email || '').trim()
+  };
+
+  if (!normalizedCustomer.name || !normalizedCustomer.phone || !normalizedCustomer.email) {
+    return res.status(400).json({ message: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và email để nhận QR check-in.' });
   }
 
   const items = cart.items.map((item) => ({
@@ -409,14 +479,18 @@ app.post('/api/orders', async (req, res) => {
   const orderCode = generateOrderCode();
   const now = new Date().toISOString();
   const normalizedPaymentMethod = String(paymentMethod || 'COD').toUpperCase();
+  const proofImage = String(req.body?.proofImage || '').trim();
+  const deliveryLocation = String(req.body?.deliveryLocation || 'Nhận tại sự kiện').trim();
+
   const order = {
     id: `TM-${Date.now()}`,
     orderCode,
     customer: {
-      name: customer.name,
-      phone: customer.phone,
-      email: customer.email
+      name: normalizedCustomer.name,
+      phone: normalizedCustomer.phone,
+      email: normalizedCustomer.email
     },
+    deliveryLocation: deliveryLocation || 'Nhận tại sự kiện',
     paymentMethod: normalizedPaymentMethod,
     items,
     total,
@@ -425,7 +499,9 @@ app.post('/api/orders', async (req, res) => {
     createdAt: now,
     qrCodeUrl: null,
     emailSent: false,
-    checkedInAt: null
+    checkedInAt: null,
+    proofImage: proofImage || null,
+    proofUploadedAt: proofImage ? now : null
   };
 
   let payment = createBankPayment(order);
@@ -448,7 +524,11 @@ app.get('/api/orders/:orderCode/status', async (req, res) => {
   const order = await findOrderPersistent(req.params.orderCode);
   const email = String(req.query.email || '').trim().toLowerCase();
 
-  if (!order || !email || order.customer.email.toLowerCase() !== email) {
+  if (!order) {
+    return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+  }
+
+  if (email && String(order.customer.email || '').trim().toLowerCase() !== email) {
     return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
   }
 
@@ -458,14 +538,165 @@ app.get('/api/orders/:orderCode/status', async (req, res) => {
       status: order.status,
       ticketStatus: order.ticketStatus,
       total: order.total,
+      deliveryLocation: order.deliveryLocation || 'Nhận tại sự kiện',
       qrCodeUrl: order.qrCodeUrl,
       emailSent: order.emailSent,
       emailError: order.emailError || null,
       paidAt: order.paidAt || null,
-      checkedInAt: order.checkedInAt || null
+      checkedInAt: order.checkedInAt || null,
+      proofImage: order.proofImage || null,
+      proofUploadedAt: order.proofUploadedAt || null
     }
   });
 });
+
+function normalizeGoogleSheetRecord(row = {}) {
+  const values = row && typeof row === 'object' ? row : {};
+  const orderCode = String(values.orderCode || values.order_code || values['Mã đơn'] || values['order'] || values.reference || values.content || values.transferContent || values['Nội dung'] || '').trim();
+  const amount = Number(values.amount ?? values.total ?? values['Số tiền'] ?? values.amountVnd ?? values.money ?? values.transferAmount ?? 0);
+  const status = String(values.status || values['Trạng thái'] || values.paymentStatus || '').trim().toLowerCase();
+  const content = String(values.transferContent || values['Nội dung'] || values.content || values.description || '').trim();
+
+  return {
+    orderCode,
+    amount,
+    status,
+    content
+  };
+}
+
+async function readGoogleSheetTransactions() {
+  const sheetUrl = (process.env.GOOGLE_SHEET_URL || '').trim();
+  if (!sheetUrl) return [];
+
+  try {
+    const response = await fetchWithTimeout(sheetUrl, { method: 'GET' }, 12000);
+    if (!response.ok) {
+      console.warn('Google Sheet fetch failed:', response.status, response.statusText);
+      return [];
+    }
+
+    const text = await response.text();
+    if (!text) return [];
+    if (/<\/?html|<!doctype\s+html/i.test(text)) {
+      return [];
+    }
+
+    const json = (() => {
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return null;
+      }
+    })();
+
+    if (json && Array.isArray(json)) {
+      return json.map(normalizeGoogleSheetRecord);
+    }
+
+    if (json && Array.isArray(json.values)) {
+      const rows = json.values.slice(1).map((row) => ({
+        orderCode: row[0],
+        amount: row[1],
+        transferContent: row[2],
+        status: row[3]
+      }));
+      return rows.map(normalizeGoogleSheetRecord);
+    }
+
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    if (!lines.length) return [];
+
+    const headers = lines[0].split(',').map((value) => value.replace(/^\s+|\s+$/g, ''));
+    return lines.slice(1).map((line) => {
+      const cells = line.split(',');
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = cells[index] || '';
+      });
+      return normalizeGoogleSheetRecord(row);
+    });
+  } catch (error) {
+    console.warn('Google Sheet verification unavailable:', error.message);
+    return [];
+  }
+}
+
+async function findGoogleSheetMatch(orderCode, amount) {
+  const sheetUrl = (process.env.GOOGLE_SHEET_URL || '').trim();
+  if (!sheetUrl) return null;
+
+  const rows = await readGoogleSheetTransactions();
+  const targetCode = String(orderCode || '').trim();
+  const targetAmount = Number(amount || 0);
+
+  const exactMatch = rows.find((row) => {
+    if (!row.orderCode || !targetCode) return false;
+    return row.orderCode === targetCode || row.content.includes(targetCode) || row.orderCode.includes(targetCode);
+  });
+
+  if (exactMatch) {
+    if (targetAmount && exactMatch.amount && Number(exactMatch.amount) !== 0 && Number(exactMatch.amount) !== targetAmount) {
+      return { matched: false, reason: 'amount-mismatch', row: exactMatch };
+    }
+    return { matched: true, row: exactMatch };
+  }
+
+  const contentMatch = rows.find((row) => {
+    const source = String(row.content || row.orderCode || '');
+    return source.includes(targetCode);
+  });
+
+  if (contentMatch) {
+    if (targetAmount && contentMatch.amount && Number(contentMatch.amount) !== 0 && Number(contentMatch.amount) !== targetAmount) {
+      return { matched: false, reason: 'amount-mismatch', row: contentMatch };
+    }
+    return { matched: true, row: contentMatch };
+  }
+
+  return null;
+}
+
+async function confirmOrderPaid(orderCode) {
+  const order = await findOrderPersistent(orderCode);
+  if (!order) {
+    return null;
+  }
+
+  if (order.status === 'Đã thanh toán') {
+    return order;
+  }
+
+  const sheetMatch = await findGoogleSheetMatch(order.orderCode, Number(order.total || 0));
+  if (process.env.GOOGLE_SHEET_URL && sheetMatch === null) {
+    throw new Error('Không tìm thấy giao dịch tương ứng trong Google Sheet.');
+  }
+
+  if (sheetMatch && sheetMatch.matched === false) {
+    throw new Error('Giao dịch trong Google Sheet không khớp với đơn hàng.');
+  }
+
+  order.status = 'Đã thanh toán';
+  order.ticketStatus = 'Chưa sử dụng';
+  order.paidAt = new Date().toISOString();
+  order.qrCodeUrl = order.qrCodeUrl || createQrCodeUrl(order);
+
+  await saveOrderPersistent(order);
+
+  try {
+    const emailResult = await sendResendEmail(order);
+    order.emailSent = !emailResult.skipped;
+    order.emailId = emailResult.id || null;
+    delete order.emailError;
+    await saveOrderPersistent(order);
+  } catch (error) {
+    order.emailSent = false;
+    order.emailError = error.message;
+    await saveOrderPersistent(order);
+  }
+
+  return order;
+}
 
 app.get('/api/admin/orders', async (req, res) => {
   const { status, search } = req.query;
@@ -473,7 +704,7 @@ app.get('/api/admin/orders', async (req, res) => {
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesStatus = !status || status === 'all' || order.status === status;
-    const text = `${order.orderCode} ${order.customer.name} ${order.customer.phone}`.toLowerCase();
+    const text = `${order.orderCode} ${order.customer.name} ${order.customer.phone} ${order.deliveryLocation || ''}`.toLowerCase();
     const matchesSearch = !search || text.includes(String(search).toLowerCase());
     return matchesStatus && matchesSearch;
   });
@@ -483,7 +714,34 @@ app.get('/api/admin/orders', async (req, res) => {
     orders: filteredOrders
       .slice()
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((order) => ({
+        ...order,
+        deliveryLocation: order.deliveryLocation || 'Nhận tại sự kiện',
+        proofImage: order.proofImage || null,
+        proofUploadedAt: order.proofUploadedAt || null
+      }))
   });
+});
+
+app.post('/api/admin/confirm-payment', async (req, res) => {
+  const { orderCode } = req.body || {};
+  if (!orderCode) {
+    return res.status(400).json({ message: 'Thiếu mã đơn hàng.' });
+  }
+
+  try {
+    const order = await confirmOrderPaid(String(orderCode));
+    if (!order) {
+      return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+    }
+
+    return res.status(200).json({
+      message: 'Đã xác nhận thanh toán thủ công.',
+      order
+    });
+  } catch (error) {
+    return res.status(409).json({ message: error.message || 'Xác nhận thanh toán thất bại.' });
+  }
 });
 
 app.post('/api/admin/checkin', async (req, res) => {
@@ -535,8 +793,25 @@ app.post('/api/sepay-webhook', async (req, res) => {
   const payload = req.body || {};
   const transaction = payload.data && typeof payload.data === 'object' ? payload.data : payload;
   const rawSignature = req.headers['x-signature'] || req.headers['signature'] || req.headers['x-sepay-signature'];
-  const orderCodeFromPayload = transaction.orderCode || transaction.description || transaction.reference || transaction.referenceCode || transaction.order_id || transaction.content || transaction.transactionContent || transaction.transferContent;
-  const amount = Number(transaction.amount ?? transaction.transferAmount ?? transaction.transfer_amount ?? transaction.transfer_amount_in ?? 0);
+
+  const orderCodeFromPayload = transaction.orderCode ||
+    transaction.description ||
+    transaction.reference ||
+    transaction.referenceCode ||
+    transaction.order_id ||
+    transaction.content ||
+    transaction.transactionContent ||
+    transaction.transferContent ||
+    payload.orderCode ||
+    payload.description ||
+    payload.reference ||
+    payload.referenceCode ||
+    payload.content ||
+    payload.transactionContent ||
+    payload.transferContent;
+
+  const rawAmount = transaction.amount ?? transaction.transferAmount ?? transaction.transfer_amount ?? transaction.transfer_amount_in ?? payload.amount ?? payload.transferAmount ?? payload.transfer_amount ?? 0;
+  const amount = Number(rawAmount || 0);
 
   if (process.env.SEPAY_WEBHOOK_SECRET && rawSignature && !verifySePaySignature(payload, rawSignature)) {
     return res.status(401).json({ message: 'Chữ ký webhook SePay không hợp lệ.' });
@@ -552,19 +827,30 @@ app.post('/api/sepay-webhook', async (req, res) => {
     orderCodeText.includes(entry.orderCode) ||
     String(transaction.description || '').includes(entry.orderCode) ||
     String(transaction.transactionContent || '').includes(entry.orderCode) ||
-    String(transaction.content || '').includes(entry.orderCode)
+    String(transaction.content || '').includes(entry.orderCode) ||
+    String(payload.description || '').includes(entry.orderCode) ||
+    String(payload.transactionContent || '').includes(entry.orderCode) ||
+    String(payload.content || '').includes(entry.orderCode)
   ));
 
   if (!order) {
     return res.status(404).json({ message: 'Không tìm thấy đơn hàng tương ứng.' });
   }
 
-  const paymentSucceeded = transaction.code === undefined || transaction.code === '00' || transaction.code === 0 || transaction.transferType === 'in';
+  const paymentSucceeded = transaction.code === undefined ||
+    transaction.code === '00' ||
+    transaction.code === 0 ||
+    transaction.transferType === 'in' ||
+    payload.code === undefined ||
+    payload.code === '00' ||
+    payload.code === 0 ||
+    payload.transferType === 'in';
+
   if (!paymentSucceeded) {
     return res.status(200).json({ message: 'Giao dịch chưa thành công.', order });
   }
 
-  if (Number(order.total) !== amount) {
+  if (Number(order.total) !== 0 && Number(order.total) !== amount) {
     return res.status(200).json({ message: 'Số tiền không khớp với đơn hàng.', order });
   }
 
@@ -588,13 +874,13 @@ app.post('/api/sepay-webhook', async (req, res) => {
 
     if (emailResult.skipped) {
       return res.status(200).json({
-        message: 'Đã thanh toán thành công. Email xác nhận chưa được gửi vì cấu hình email chưa được thiết lập.',
+        message: 'Thanh toán thành công. QR check-in đã sẵn sàng trên web để bạn lưu/in.',
         order
       });
     }
 
     return res.status(200).json({
-      message: 'Thanh toán thành công và email xác nhận đã được gửi.',
+      message: 'Thanh toán thành công. QR check-in đã sẵn sàng trên web và email xác nhận đã được gửi.',
       order
     });
   } catch (error) {

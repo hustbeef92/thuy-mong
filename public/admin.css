@@ -196,6 +196,27 @@ th {
   color: #486bde;
 }
 
+.delivery-badge {
+  display: inline-block;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.delivery-badge.neu {
+  background: rgba(30, 90, 155, 0.12);
+  color: #1e5a9b;
+  border: 1px solid rgba(30, 90, 155, 0.25);
+}
+
+.delivery-badge.event {
+  background: rgba(201, 154, 97, 0.14);
+  color: #8c622d;
+  border: 1px solid rgba(201, 154, 97, 0.28);
+}
+
 .scanner-layout {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;

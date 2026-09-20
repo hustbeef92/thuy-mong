@@ -60,15 +60,11 @@
 
               <div class="stats-row">
                 <div>
-                  <strong>19:30</strong>
+                  <strong>17:30</strong>
                   <span>Giờ mở màn</span>
                 </div>
                 <div>
-                  <strong>60 phút</strong>
-                  <span>Thời lượng</span>
-                </div>
-                <div>
-                  <strong>361</strong>
+                  <strong>361 Trường Chinh</strong>
                   <span>Địa điểm</span>
                 </div>
               </div>
@@ -107,8 +103,8 @@
                   <h3>Một đêm hội ngộ</h3>
                 <p>
                   Chú Tễu giáo đầu, múa rồng, Lê Lợi trả gươm, đánh cá và múa tiên được
-                  dàn dựng cùng ánh sáng, âm nhạc dân tộc phối khí hiện đại. Suất diễn kéo
-                  dài 60 phút tại Nhà Hát Múa Rối Việt Nam, 361 Trường Chinh.
+                  dàn dựng cùng ánh sáng, âm nhạc dân tộc phối khí hiện đại tại Nhà Hát
+                  Múa Rối Việt Nam, 361 Trường Chinh vào lúc 17:30 ngày 17/10/2026.
                 </p>
               </div>
             </div>
@@ -173,13 +169,25 @@
                 </div>
                 <div class="field-group">
                   <label>Email</label>
-                  <input type="email" name="email" placeholder="Nhập email" required />
+                  <input type="email" name="email" placeholder="Nhập email để nhận QR check-in" required />
+                </div>
+                <div class="field-group">
+                  <label for="delivery-location">Địa chỉ / Nơi nhận hàng</label>
+                  <select id="delivery-location" name="deliveryLocation" required>
+                    <option value="Nhận tại sự kiện">Nhận tại sự kiện (361 Trường Chinh, Hà Nội)</option>
+                    <option value="Nhận ở NEU">Nhận ở NEU (Đại học Kinh tế Quốc dân)</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label>Ảnh chuyển khoản thành công</label>
+                  <input type="file" id="payment-proof-input" name="paymentProof" accept="image/*" />
+                  <small>Upload ảnh chụp màn hình/biên lai chuyển khoản để admin check lại trước khi xác nhận.</small>
                 </div>
                 <button type="submit" class="btn btn-primary full-width">Thanh toán bằng QR</button>
               </form>
 
               <div id="payment-account-info" class="payment-account-box" aria-live="polite">
-                <p>VietQR sẽ hiện ngay sau khi bạn xác nhận thông tin. Sau khi nhận được chuyển khoản, hệ thống tự động cập nhật và gửi vé điện tử kèm QR check-in qua email.</p>
+                <p>VietQR sẽ hiện ngay sau khi bạn xác nhận thông tin. Sau khi nhận được chuyển khoản, hệ thống sẽ tự động xác nhận thanh toán và hiển thị QR check-in trực tiếp trên màn hình cho bạn.</p>
               </div>
             </div>
           </div>

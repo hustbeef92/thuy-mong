@@ -37,6 +37,158 @@ test('POST /api/orders creates a pending order with total and orderCode', async 
   }
 });
 
+test('POST /api/orders saves deliveryLocation and defaults to Nhận tại sự kiện', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+
+    const resNeu = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách NEU', phone: '0901234567', email: 'neu@example.com' },
+      deliveryLocation: 'Nhận ở NEU',
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(resNeu.status, 201);
+    assert.equal(resNeu.json.order.deliveryLocation, 'Nhận ở NEU');
+
+    const statusNeu = await request(global.fetch, 'GET', `/api/orders/${resNeu.json.order.orderCode}/status?email=neu%40example.com`, null, port);
+    assert.equal(statusNeu.status, 200);
+    assert.equal(statusNeu.json.order.deliveryLocation, 'Nhận ở NEU');
+
+    const resDefault = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách Sự Kiện', phone: '0907654321', email: 'event@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(resDefault.status, 201);
+    assert.equal(resDefault.json.order.deliveryLocation, 'Nhận tại sự kiện');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/orders requires email at checkout so QR can be sent later', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const result = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách không email', phone: '0909999999', email: '' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 1000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(result.status, 400);
+    assert.match(result.json.message, /email/i);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/admin/confirm-payment marks a pending order as paid', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const created = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách xác nhận', phone: '0907777777', email: 'confirm@example.com' },
+      cart: { items: [{ id: 'tc', name: 'Vé Tiêu Chuẩn', price: 150000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    const response = await request(global.fetch, 'POST', '/api/admin/confirm-payment', {
+      orderCode: created.json.order.orderCode
+    }, port);
+
+    assert.equal(response.status, 200);
+    assert.equal(response.json.order.status, 'Đã thanh toán');
+    assert.ok(response.json.order.qrCodeUrl);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/orders accepts payment proof image and admin confirmation emails QR', async () => {
+  const originalFetch = global.fetch;
+  const server = app.listen(0);
+
+  try {
+    process.env.RESEND_API_KEY = 'test-key';
+    const port = server.address().port;
+
+    global.fetch = async (url, options) => {
+      if (String(url).includes('api.resend.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'email-proof' }),
+          text: async () => ''
+        };
+      }
+      return originalFetch(url, options);
+    };
+
+    const created = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách chụp ảnh', phone: '0901111111', email: 'proof@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK',
+      proofImage: 'data:image/png;base64,AAAA'
+    }, port);
+
+    assert.equal(created.status, 201);
+    assert.equal(created.json.order.proofImage, 'data:image/png;base64,AAAA');
+
+    const response = await request(global.fetch, 'POST', '/api/admin/confirm-payment', {
+      orderCode: created.json.order.orderCode
+    }, port);
+
+    assert.equal(response.status, 200);
+    assert.equal(response.json.order.status, 'Đã thanh toán');
+    assert.ok(response.json.order.qrCodeUrl);
+    assert.equal(response.json.order.customer.email, 'proof@example.com');
+  } finally {
+    global.fetch = originalFetch;
+    delete process.env.RESEND_API_KEY;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/admin/confirm-payment rejects payment when Google Sheet has no matching transaction', async () => {
+  const originalFetch = global.fetch;
+  const server = app.listen(0);
+
+  try {
+    const port = server.address().port;
+    process.env.GOOGLE_SHEET_URL = 'https://example.com/sheet.csv';
+    global.fetch = async (url, options) => {
+      if (String(url).startsWith('https://example.com')) {
+        return new Response('orderCode,amount,content,status\nTM-FAKE,999999,TM-FAKE,success\n', {
+          status: 200,
+          headers: { 'Content-Type': 'text/csv; charset=utf-8' }
+        });
+      }
+      return originalFetch(url, options);
+    };
+
+    const created = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách sheet', phone: '0908888888', email: 'sheet@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 90000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    const response = await request(global.fetch, 'POST', '/api/admin/confirm-payment', {
+      orderCode: created.json.order.orderCode
+    }, port);
+
+    assert.equal(response.status, 409);
+    assert.match(response.json.message, /Google Sheet|không khớp|không tìm thấy/i);
+  } finally {
+    delete process.env.GOOGLE_SHEET_URL;
+    global.fetch = originalFetch;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('POST /api/sepay-webhook accepts webhook signatures generated from raw request body', async () => {
   const originalFetch = global.fetch;
   const server = app.listen(0);
@@ -82,6 +234,65 @@ test('POST /api/sepay-webhook accepts webhook signatures generated from raw requ
         'x-signature': signature
       },
       body: rawBody
+    });
+
+    const result = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(result.order.status, 'Đã thanh toán');
+    assert.ok(result.order.qrCodeUrl);
+  } finally {
+    global.fetch = originalFetch;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/sepay-webhook accepts callbacks where SePay signs only the nested data object', async () => {
+  const originalFetch = global.fetch;
+  const server = app.listen(0);
+
+  try {
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.SEPAY_WEBHOOK_SECRET = 'test-secret';
+
+    const port = server.address().port;
+    const created = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Nguyễn Văn E', phone: '0904444444', email: 'e@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 170000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'MOMO'
+    }, port);
+
+    const orderCode = created.json.order.orderCode;
+    const payload = {
+      data: {
+        amount: 170000,
+        orderCode,
+        code: '00',
+        description: orderCode,
+        transferType: 'in'
+      }
+    };
+    const rawBody = JSON.stringify(payload.data);
+    const signature = crypto.createHmac('sha256', process.env.SEPAY_WEBHOOK_SECRET).update(rawBody).digest('hex');
+
+    global.fetch = async (url, options) => {
+      if (String(url).includes('api.resend.com')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'email-3' }),
+          text: async () => ''
+        };
+      }
+      return originalFetch(url, options);
+    };
+
+    const response = await fetch(`http://127.0.0.1:${port}/api/sepay-webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-sepay-signature': signature
+      },
+      body: JSON.stringify(payload)
     });
 
     const result = await response.json();
@@ -236,6 +447,51 @@ test('SePay transactionContent payload updates payment and sends QR email', asyn
     assert.equal(result.json.order.status, 'Đã thanh toán');
     assert.equal(result.json.order.emailSent, true);
   } finally {
+    global.fetch = originalFetch;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('Resend uses testing address when customer email is example.com and test email mode is enabled', async () => {
+  const originalFetch = global.fetch;
+  const server = app.listen(0);
+  let resendPayload;
+
+  try {
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_ALLOW_TEST_EMAIL = 'true';
+    const port = server.address().port;
+    const created = await request(originalFetch, 'POST', '/api/orders', {
+      customer: { name: 'Example Tester', phone: '0905555555', email: 'testlive@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK'
+    }, port);
+
+    const order = created.json.order;
+    global.fetch = async (url, options) => {
+      if (String(url).includes('api.qrserver.com')) {
+        return { ok: true, arrayBuffer: async () => Uint8Array.from([137, 80, 78, 71]).buffer };
+      }
+      if (String(url).includes('api.resend.com')) {
+        resendPayload = JSON.parse(options.body);
+        return { ok: true, status: 200, json: async () => ({ id: 'email-test-example' }), text: async () => '' };
+      }
+      return originalFetch(url, options);
+    };
+
+    const result = await request(originalFetch, 'POST', '/api/sepay-webhook', {
+      code: '00',
+      orderCode: order.orderCode,
+      amount: 100000,
+      description: order.orderCode,
+      transferType: 'in'
+    }, port);
+
+    assert.equal(result.status, 200);
+    assert.equal(result.json.order.emailSent, true);
+    assert.equal(resendPayload.to[0], 'delivered@resend.dev');
+  } finally {
+    delete process.env.RESEND_ALLOW_TEST_EMAIL;
     global.fetch = originalFetch;
     await new Promise((resolve) => server.close(resolve));
   }
