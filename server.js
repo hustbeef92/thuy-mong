@@ -536,22 +536,7 @@ async function sendResendEmail(order) {
   return response.json();
 }
 
-// API Quản lý Mặt Hàng (Admin)
-app.get('/api/admin/items', (req, res) => {
-  res.json(readItems());
-});
-
-app.post('/api/admin/items', (req, res) => {
-  const items = req.body;
-  if (!Array.isArray(items)) {
-    return res.status(400).json({ message: 'Dữ liệu không hợp lệ.' });
-  }
-  if (saveItems(items)) {
-    res.json({ message: 'Đã lưu danh sách mặt hàng!', items });
-  } else {
-    res.status(500).json({ message: 'Lỗi khi lưu dữ liệu.' });
-  }
-});
+// API Quản lý Mặt Hàng (Admin) - Được định nghĩa ở cuối file
 
 app.get('/api/config', (req, res) => {
   const allItems = readItems();
