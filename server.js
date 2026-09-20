@@ -88,20 +88,32 @@ async function supabaseRequest(pathname, options = {}) {
   return JSON.parse(responseText);
 }
 
-async function readOrdersPersistent() {
+async function readOrdersPersistent(timeoutMs = 2500) {
   const localOrders = readOrders();
   if (!supabaseEnabled) return localOrders;
 
-  try {
-    const rows = await Promise.race([
-      supabaseRequest('orders?select=order_data&order=created_at.desc'),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase query timeout')), 1500))
-    ]);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const remoteOrders = Array.isArray(rows) ? rows.map((row) => row.order_data).filter(Boolean) : [];
+  try {
+    const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/orders?select=order_data&order=created_at.desc&limit=50`, {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    clearTimeout(timer);
+
+    if (!response.ok) return localOrders;
+    const rows = await response.json();
+    const remoteOrders = Array.isArray(rows) ? rows.map((r) => r.order_data).filter(Boolean) : [];
     return remoteOrders.length ? remoteOrders : localOrders;
   } catch (error) {
-    console.warn('Supabase read failed, falling back to local file store:', error.message);
+    clearTimeout(timer);
+    console.warn('Supabase read failed, fallback to local store:', error.message);
     return localOrders;
   }
 }
