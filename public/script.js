@@ -105,12 +105,23 @@ function startPaymentStatusPolling(orderCode, email) {
   appState.paymentPollTimer = setInterval(checkStatus, 5000);
 }
 
+function getMerchImageHtml(item) {
+  if (item.image) {
+    return '<img src="' + item.image + '" alt="' + item.name + '" class="ticket-card-img" />';
+  }
+  return '<div class="merch-art" aria-hidden="true">' + (item.id === 'combo-merch' ? 'COMBO' : 'KHĂN') + '</div>';
+}
+
+function getTicketImageSrc(ticket) {
+  return ticket.image || (ticket.id + '.jpg');
+}
+
 function renderTickets() {
   const container = document.getElementById('ticket-grid');
   container.innerHTML = appState.tickets
     .map((ticket) => `
       <article class="ticket-card">
-        <img src="${ticket.image || (ticket.id + '.jpg')}" alt="${ticket.name}" class="ticket-card-img" />
+        <img src="${getTicketImageSrc(ticket)}" alt="${ticket.name}" class="ticket-card-img" />
         <div class="ticket-top">
           <h3>${ticket.name}</h3>
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
@@ -132,20 +143,23 @@ function renderTickets() {
   bindAddButtons(container);
 }
 
+function getMerchDesc(item) {
+  if (item.description) return item.description;
+  if (item.benefit) return item.benefit;
+  return item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.';
+}
+
 function renderMerch() {
   const container = document.getElementById('merch-grid');
   container.innerHTML = appState.merch
     .map((item) => `
       <article class="merch-card">
-        ${item.image 
-          ? \`<img src="\${item.image}" alt="\${item.name}" class="ticket-card-img" />\` 
-          : \`<div class="merch-art" aria-hidden="true">\${item.id === 'combo-merch' ? 'COMBO' : 'KHĂN'}</div>\`
-        }
+        ${getMerchImageHtml(item)}
         <div class="ticket-top">
           <h3>${item.name}</h3>
           <span class="ticket-price">${formatCurrency(item.price)}</span>
         </div>
-        <p>${item.description || (item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.')}</p>
+        <p>${getMerchDesc(item)}</p>
         <div class="choose-row" style="margin-top: 16px;">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
