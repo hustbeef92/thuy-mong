@@ -83,7 +83,7 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 250px;
+  min-width: 0;
 }
 
 .brand-mark {
@@ -211,12 +211,13 @@ small {
 .hero-copy h1 {
   margin: 0;
   font-family: "Cormorant Garamond", serif;
-  font-size: clamp(5.2rem, 8.6vw, 11rem);
-  line-height: 0.78;
-  letter-spacing: -0.04em;
+  font-size: clamp(3rem, 12vw, 10rem);
+  line-height: 0.88;
+  letter-spacing: -0.03em;
   font-weight: 600;
   color: #f2e1b2;
   text-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+  word-break: break-word;
 }
 
 .text-gilded {
@@ -1170,6 +1171,7 @@ body .add-to-cart:hover {
   display: grid;
   gap: 16px;
   min-height: 90px;
+}
 
 .cart-item-actions {
   display: flex;
@@ -1211,7 +1213,6 @@ body .add-to-cart:hover {
 .payment-success {
   color: #70d49d;
   font-weight: 700;
-}
 }
 
 .cart-item {
@@ -1345,6 +1346,39 @@ body .add-to-cart:hover {
 }
 
 @media (max-width: 640px) {
+  .hero-copy h1 {
+    font-size: clamp(2.8rem, 13vw, 4.2rem);
+    line-height: 1;
+  }
+
+  .nav-wrap {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 10px 0;
+    min-height: auto;
+    gap: 10px;
+  }
+
+  .brand-block {
+    min-width: 0;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-meta span {
+    font-size: 13px;
+  }
+
+  .header-meta .btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 13px;
+    width: auto;
+  }
+
   .ticket-grid,
   .merch-grid,
   .story-grid,
@@ -1353,14 +1387,36 @@ body .add-to-cart:hover {
     grid-template-columns: 1fr;
   }
 
-  .nav-wrap {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 12px 0;
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 100%;
+  }
+
+  .ticket-card,
+  .merch-card,
+  .story-card,
+  .cart-panel,
+  .checkout-panel {
+    padding: 16px;
+    border-radius: 18px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cart-item-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .image-card img {
-    height: 420px;
+    height: 360px;
   }
 
   .floating-card {
@@ -1371,9 +1427,21 @@ body .add-to-cart:hover {
 
   .cta-row {
     flex-direction: column;
+    gap: 12px;
   }
 
   .btn {
+    width: 100%;
+    padding: 0.85rem 1.4rem;
+  }
+
+  .proof-upload-box input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .proof-upload-box button {
     width: 100%;
   }
 }
