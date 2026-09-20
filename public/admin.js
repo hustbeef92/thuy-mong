@@ -307,25 +307,18 @@ ordersTableBody.addEventListener('click', async (event) => {
   }
 });
 
-const clearOrdersBtn = document.getElementById('clearOrdersBtn');
-if (clearOrdersBtn) {
-  clearOrdersBtn.addEventListener('click', async () => {
-    if (!confirm('Bạn có chắc chắn muốn xóa TOÀN BỘ đơn hàng test trong hệ thống? Hành động này sẽ dọn sạch tất cả dữ liệu đơn hàng và không thể hoàn tác.')) {
-      return;
-    }
+const refreshOrdersBtn = document.getElementById('refreshOrdersBtn');
+if (refreshOrdersBtn) {
+  refreshOrdersBtn.addEventListener('click', async () => {
     try {
-      clearOrdersBtn.disabled = true;
-      clearOrdersBtn.textContent = 'Đang xóa...';
-      const res = await fetch('/api/admin/clear-orders', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Không thể xóa toàn bộ đơn');
-      alert('Đã xóa sạch toàn bộ đơn hàng test!');
+      refreshOrdersBtn.disabled = true;
+      refreshOrdersBtn.textContent = 'Đang làm mới...';
       await loadOrders();
     } catch (err) {
-      alert('Lỗi: ' + (err.message || 'Lỗi khi xóa đơn'));
+      alert('Lỗi: ' + (err.message || 'Lỗi khi tải lại dữ liệu'));
     } finally {
-      clearOrdersBtn.disabled = false;
-      clearOrdersBtn.textContent = '🗑 Xóa sạch đơn test';
+      refreshOrdersBtn.disabled = false;
+      refreshOrdersBtn.textContent = '🔄 Làm mới';
     }
   });
 }
