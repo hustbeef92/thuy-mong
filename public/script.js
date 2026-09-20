@@ -112,6 +112,7 @@ function renderTickets() {
   container.innerHTML = appState.tickets
     .map((ticket) => `
       <article class="ticket-card">
+        <img src="${ticket.id}.jpg" alt="${ticket.name}" class="ticket-card-img" />
         <div class="ticket-top">
           <h3>${ticket.name} (${formatCurrency(ticket.price)})</h3>
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
