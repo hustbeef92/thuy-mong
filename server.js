@@ -705,6 +705,28 @@ app.post('/api/orders/:orderCode/proof', async (req, res) => {
   });
 });
 
+app.post('/api/orders/:orderCode/confirm', async (req, res) => {
+  const { orderCode } = req.params;
+
+  const order = await findOrderPersistent(orderCode);
+  if (!order) {
+    return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+  }
+
+  order.customerConfirmed = true;
+  order.customerConfirmedAt = new Date().toISOString();
+  await saveOrderPersistent(order);
+
+  return res.status(200).json({
+    message: 'Xác nhận thành công!',
+    order: {
+      orderCode: order.orderCode,
+      customerConfirmed: order.customerConfirmed,
+      customerConfirmedAt: order.customerConfirmedAt
+    }
+  });
+});
+
 function normalizeGoogleSheetRecord(row = {}) {
   const values = row && typeof row === 'object' ? row : {};
   const orderCode = String(values.orderCode || values.order_code || values['Mã đơn'] || values['order'] || values.reference || values.content || values.transferContent || values['Nội dung'] || '').trim();

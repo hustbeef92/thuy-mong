@@ -104,6 +104,15 @@ async function loadOrders() {
         }
       }
 
+      let customerStatusHtml = '';
+      if (order.status !== 'Đã thanh toán') {
+        if (order.customerConfirmed) {
+          customerStatusHtml = '<div style="margin-top: 4px; font-size: 0.8rem; color: #2da76d; font-weight: 600;">Khách: Đã xác nhận</div>';
+        } else {
+          customerStatusHtml = '<div style="margin-top: 4px; font-size: 0.8rem; color: #f59e0b;">Khách: Chờ xác nhận</div>';
+        }
+      }
+
       return `
         <tr>
           <td><strong>${order.orderCode}</strong></td>
@@ -115,6 +124,7 @@ async function loadOrders() {
           <td>${proofImageHtml}</td>
           <td>
             <span class="badge ${statusClass}">${order.status}</span>
+            ${customerStatusHtml}
             ${emailStatusHtml}
           </td>
           <td>
