@@ -431,6 +431,22 @@ addItemBtn.addEventListener('click', () => {
   itemModalBackdrop.style.display = 'block';
 });
 
+const refreshItemsBtn = document.getElementById('refreshItemsBtn');
+if (refreshItemsBtn) {
+  refreshItemsBtn.addEventListener('click', async () => {
+    try {
+      refreshItemsBtn.disabled = true;
+      refreshItemsBtn.textContent = 'Đang làm mới...';
+      await loadItems();
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Lỗi khi tải lại dữ liệu'));
+    } finally {
+      refreshItemsBtn.disabled = false;
+      refreshItemsBtn.textContent = '🔄 Làm mới';
+    }
+  });
+}
+
 closeItemModalBtn.addEventListener('click', closeItemModal);
 itemModalBackdrop.addEventListener('click', closeItemModal);
 
@@ -453,7 +469,7 @@ async function loadItems() {
           ${item.benefit || '—'}
         </td>
         <td>
-          <button class="btn btn-outline edit-item-btn" data-id="${item.id}" style="padding: 4px 8px; font-size: 12px; margin-right: 4px;">Sửa</button>
+          <button class="btn btn-outline edit-item-btn" data-id="${item.id}" style="padding: 4px 8px; font-size: 12px; margin-right: 4px; color: #000; border-color: #000;">Sửa</button>
           <button class="btn btn-outline delete-item-btn" data-id="${item.id}" style="padding: 4px 8px; font-size: 12px; color: #dc2626; border-color: #fca5a5;">Xóa</button>
         </td>
       </tr>
