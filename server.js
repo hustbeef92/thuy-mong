@@ -15,7 +15,8 @@ const DATA_DIR = process.env.VERCEL
   ? path.join('/tmp', 'thuy-mong-data')
   : path.join(__dirname, 'data');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-const ITEMS_FILE = path.join(__dirname, 'data', 'items.json');
+const ITEMS_FILE = path.join(DATA_DIR, 'items.json');
+const BUNDLED_ITEMS_FILE = path.join(__dirname, 'data', 'items.json');
 
 function readItems() {
   try {
@@ -43,6 +44,7 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+// Khởi tạo orders.json
 if (!fs.existsSync(ORDERS_FILE)) {
   if (fs.existsSync(BUNDLED_ORDERS_FILE)) {
     try {
@@ -52,6 +54,19 @@ if (!fs.existsSync(ORDERS_FILE)) {
     }
   } else {
     fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
+  }
+}
+
+// Khởi tạo items.json
+if (!fs.existsSync(ITEMS_FILE)) {
+  if (fs.existsSync(BUNDLED_ITEMS_FILE)) {
+    try {
+      fs.copyFileSync(BUNDLED_ITEMS_FILE, ITEMS_FILE);
+    } catch (_) {
+      fs.writeFileSync(ITEMS_FILE, '[]', 'utf8');
+    }
+  } else {
+    fs.writeFileSync(ITEMS_FILE, '[]', 'utf8');
   }
 }
 
