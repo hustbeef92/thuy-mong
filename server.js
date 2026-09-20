@@ -12,12 +12,21 @@ const DATA_DIR = process.env.VERCEL
   : path.join(__dirname, 'data');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 
+const BUNDLED_ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-if (!fs.existsSync(ORDERS_FILE)) {
-  fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
+if (!fs.existsSync(ORDERS_FILE) || (fs.existsSync(ORDERS_FILE) && fs.readFileSync(ORDERS_FILE, 'utf8').trim() === '[]')) {
+  if (fs.existsSync(BUNDLED_ORDERS_FILE)) {
+    try {
+      fs.copyFileSync(BUNDLED_ORDERS_FILE, ORDERS_FILE);
+    } catch (_) {
+      if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
+    }
+  } else if (!fs.existsSync(ORDERS_FILE)) {
+    fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
+  }
 }
 
 function readOrders() {
@@ -737,18 +746,9 @@ async function confirmOrderPaid(orderCode) {
   return order;
 }
 
-app.get('/api/admin/orders', async (req, res) => {
+app.get('/api/admin/orders', (req, res) => {
   const { status, search } = req.query;
-  let allOrders = readOrders();
-
-  if (supabaseEnabled && (!allOrders || allOrders.length === 0)) {
-    try {
-      const remoteOrders = await readOrdersPersistent(1000);
-      if (remoteOrders && remoteOrders.length) {
-        allOrders = remoteOrders;
-      }
-    } catch (_) {}
-  }
+  const allOrders = readOrders();
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesStatus = !status || status === 'all' || order.status === status;
