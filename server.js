@@ -174,8 +174,8 @@ function getOrderSummary(orders) {
   };
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/assets', express.static(path.join(__dirname, 'public')));
 
 const ticketTypes = [
@@ -739,7 +739,16 @@ async function confirmOrderPaid(orderCode) {
 
 app.get('/api/admin/orders', async (req, res) => {
   const { status, search } = req.query;
-  const allOrders = await readOrdersPersistent();
+  let allOrders = readOrders();
+
+  if (supabaseEnabled && (!allOrders || allOrders.length === 0)) {
+    try {
+      const remoteOrders = await readOrdersPersistent(1000);
+      if (remoteOrders && remoteOrders.length) {
+        allOrders = remoteOrders;
+      }
+    } catch (_) {}
+  }
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesStatus = !status || status === 'all' || order.status === status;
