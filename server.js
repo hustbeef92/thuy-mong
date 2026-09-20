@@ -4,6 +4,10 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+let nodemailer = null;
+try {
+  nodemailer = require('nodemailer');
+} catch (_) {}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -376,10 +380,100 @@ function resolveResendRecipient(email) {
   return rawEmail;
 }
 
+async function sendGmailSmtpEmail(order) {
+  const gmailUser = (process.env.GMAIL_USER || process.env.SMTP_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+
+  if (!gmailUser || !gmailPass || !nodemailer) {
+    return null;
+  }
+
+  const recipient = String(order.customer?.email || '').trim();
+  if (!recipient) {
+    return { skipped: true, reason: 'Không có email người nhận.' };
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: gmailUser,
+      pass: gmailPass
+    }
+  });
+
+  const qrCodeUrl = order.qrCodeUrl || createQrCodeUrl(order);
+  const attachments = [];
+  try {
+    const qrResponse = await fetchWithTimeout(qrCodeUrl, {}, 5000);
+    if (qrResponse.ok) {
+      const qrBuffer = Buffer.from(await qrResponse.arrayBuffer());
+      attachments.push({
+        filename: `qr-checkin-${order.orderCode}.png`,
+        content: qrBuffer,
+        cid: 'thuy-mong-checkin-qr'
+      });
+    }
+  } catch (err) {
+    console.warn('QR attachment download failed:', err.message);
+  }
+
+  const itemsList = (order.items || []).map((it) => `${it.name} x${it.quantity}`).join(', ');
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222; line-height: 1.6; border: 1px solid #e8decb; border-radius: 12px; overflow: hidden; background: #ffffff;">
+      <div style="background: #071a1d; color: #f6f2ea; padding: 24px; text-align: center;">
+        <h1 style="color: #f1c66b; margin: 0 0 6px; font-family: Georgia, serif; letter-spacing: 2px;">THỦY MỘNG</h1>
+        <p style="margin: 0; font-size: 14px; opacity: 0.85;">Vé & QR Check-in Sự Kiện Múa Rối Nước</p>
+      </div>
+      <div style="padding: 24px;">
+        <h2 style="color: #071a1d; margin-top: 0;">Xin chào ${order.customer.name},</h2>
+        <p>Chúc mừng bạn! Đơn hàng đặt vé sự kiện <strong>Thủy Mộng</strong> của bạn đã được xác nhận thanh toán thành công.</p>
+        
+        <div style="background: #fdfbf7; border: 1px solid #f1e4ce; border-radius: 8px; padding: 16px; margin: 18px 0;">
+          <p style="margin: 6px 0;"><strong>Mã đơn hàng:</strong> <span style="font-size: 1.1em; color: #071a1d; font-weight: bold;">${order.orderCode}</span></p>
+          <p style="margin: 6px 0;"><strong>Các mặt hàng:</strong> ${itemsList || '—'}</p>
+          <p style="margin: 6px 0;"><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
+          <p style="margin: 6px 0;"><strong>Tổng tiền:</strong> <span style="color: #c99a61; font-weight: bold; font-size: 1.1em;">${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total)}</span></p>
+          <p style="margin: 6px 0;"><strong>Thời gian biểu diễn:</strong> 17:30 · Thứ Bảy, 17/10/2026</p>
+          <p style="margin: 6px 0;"><strong>Địa điểm:</strong> Nhà Hát Múa Rối Việt Nam, 361 Trường Chinh, Thanh Xuân, Hà Nội</p>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <p style="font-weight: bold; margin-bottom: 12px; color: #071a1d; font-size: 15px;">MÃ QR CHECK-IN VÀO CỬA</p>
+          <img src="${attachments.length ? 'cid:thuy-mong-checkin-qr' : qrCodeUrl}" alt="QR Check-in" style="width: 200px; height: 200px; border: 2px solid #f1c66b; border-radius: 12px; padding: 8px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" />
+          <p style="font-size: 13px; color: #777; margin-top: 8px;">(Vui lòng mang theo email này hoặc lưu ảnh QR đính kèm để check-in tại cửa sự kiện)</p>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="font-size: 13px; color: #666; margin: 0;">
+          Mọi thắc mắc vui lòng liên hệ Ban tổ chức Thủy Mộng:<br />
+          Hotline: <strong>096 775 20 06</strong> | Email: <strong>thuymongsukien2026@gmail.com</strong>
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await transporter.sendMail({
+    from: `"Thủy Mộng" <${gmailUser}>`,
+    to: recipient,
+    subject: `[Thủy Mộng] Vé & QR Check-in sự kiện ngày 17/10/2026 - ${order.orderCode}`,
+    html: htmlContent,
+    attachments
+  });
+
+  return { id: info.messageId, provider: 'gmail' };
+}
+
 async function sendResendEmail(order) {
+  // Ưu tiên gửi qua Gmail SMTP nếu được cấu hình
+  const gmailResult = await sendGmailSmtpEmail(order);
+  if (gmailResult) {
+    return gmailResult;
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.log('RESEND_API_KEY not configured. Skipping email delivery.');
+    console.log('Chưa cấu hình Gmail hay Resend API. Bỏ qua gửi email.');
     return { skipped: true };
   }
 
