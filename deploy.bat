@@ -3,6 +3,7 @@ set "PATH=%USERPROFILE%\AppData\Local\Microsoft\WinGet\Packages\Git.MinGit_Micro
 echo Dang day code len GitHub de Vercel deploy...
 git add .
 git commit -m "Auto deploy update"
+git pull origin main --rebase
 git push origin main
 if %ERRORLEVEL% equ 0 (
     echo.
