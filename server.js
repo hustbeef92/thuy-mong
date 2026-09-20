@@ -21,14 +21,14 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-if (!fs.existsSync(ORDERS_FILE) || (fs.existsSync(ORDERS_FILE) && fs.readFileSync(ORDERS_FILE, 'utf8').trim() === '[]')) {
+if (!fs.existsSync(ORDERS_FILE)) {
   if (fs.existsSync(BUNDLED_ORDERS_FILE)) {
     try {
       fs.copyFileSync(BUNDLED_ORDERS_FILE, ORDERS_FILE);
     } catch (_) {
-      if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
+      fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
     }
-  } else if (!fs.existsSync(ORDERS_FILE)) {
+  } else {
     fs.writeFileSync(ORDERS_FILE, '[]', 'utf8');
   }
 }
@@ -883,6 +883,73 @@ app.post('/api/admin/confirm-payment', async (req, res) => {
     });
   } catch (error) {
     return res.status(409).json({ message: error.message || 'Xác nhận thanh toán thất bại.' });
+  }
+});
+
+app.post('/api/admin/clear-orders', async (req, res) => {
+  writeOrders([]);
+  if (supabaseEnabled) {
+    try {
+      await supabaseRequest('orders?order_code=neq.__NEVER__', { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Supabase clear orders failed:', err.message);
+    }
+  }
+  return res.status(200).json({ success: true, message: 'Đã xóa toàn bộ đơn hàng thành công.' });
+});
+
+app.delete('/api/admin/orders/:orderCode', async (req, res) => {
+  const code = String(req.params.orderCode || '').trim();
+  if (!code) {
+    return res.status(400).json({ message: 'Thiếu mã đơn hàng.' });
+  }
+
+  const orders = readOrders();
+  const index = orders.findIndex((o) => o.orderCode === code);
+  if (index !== -1) {
+    orders.splice(index, 1);
+    writeOrders(orders);
+  }
+
+  if (supabaseEnabled) {
+    try {
+      await supabaseRequest(`orders?order_code=eq.${encodeURIComponent(code)}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Supabase delete order failed:', err.message);
+    }
+  }
+
+  return res.status(200).json({ success: true, message: `Đã xóa đơn hàng ${code}.` });
+});
+
+app.post('/api/admin/resend-email', async (req, res) => {
+  const { orderCode } = req.body || {};
+  if (!orderCode) {
+    return res.status(400).json({ message: 'Thiếu mã đơn hàng.' });
+  }
+
+  const order = await findOrderPersistent(orderCode);
+  if (!order) {
+    return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+  }
+
+  if (order.status !== 'Đã thanh toán') {
+    return res.status(409).json({ message: 'Đơn hàng chưa được thanh toán.' });
+  }
+
+  order.qrCodeUrl = order.qrCodeUrl || createQrCodeUrl(order);
+  try {
+    const emailResult = await sendResendEmail(order);
+    order.emailSent = !emailResult.skipped;
+    order.emailId = emailResult.id || null;
+    delete order.emailError;
+    await saveOrderPersistent(order);
+    return res.status(200).json({ message: 'Đã gửi lại email QR check-in.', order });
+  } catch (error) {
+    order.emailSent = false;
+    order.emailError = error.message;
+    await saveOrderPersistent(order);
+    return res.status(502).json({ message: 'Gửi lại email thất bại.', error: error.message, order });
   }
 });
 

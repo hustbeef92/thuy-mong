@@ -121,10 +121,13 @@ async function loadOrders() {
             <span class="badge ${ticketClass}">${order.ticketStatus || 'Chưa sử dụng'}</span>
             ${confirmButton}
           </td>
+          <td>
+            <button type="button" class="btn-delete-order" data-delete-order="${order.orderCode}" style="background: transparent; border: 1px solid #fca5a5; color: #dc2626; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer;" title="Xóa đơn hàng này">Xóa</button>
+          </td>
         </tr>
       `;
     })
-      .join('') || '<tr><td colspan="9">Không có dữ liệu phù hợp.</td></tr>';
+      .join('') || '<tr><td colspan="10">Không có dữ liệu phù hợp.</td></tr>';
   } catch (error) {
     console.error('Unable to refresh orders:', error);
   }
@@ -259,6 +262,26 @@ ordersTableBody.addEventListener('click', async (event) => {
     return;
   }
 
+  const deleteBtn = event.target.closest('.btn-delete-order');
+  if (deleteBtn) {
+    const orderCode = deleteBtn.dataset.deleteOrder;
+    if (!orderCode) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng ${orderCode}?`)) return;
+    try {
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = '...';
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderCode)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Không thể xóa đơn hàng');
+      await loadOrders();
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Không thể xóa'));
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = 'Xóa';
+    }
+    return;
+  }
+
   const resendBtn = event.target.closest('.btn-resend-email');
   if (resendBtn) {
     const orderCode = resendBtn.dataset.resendOrder;
@@ -283,6 +306,29 @@ ordersTableBody.addEventListener('click', async (event) => {
     }
   }
 });
+
+const clearOrdersBtn = document.getElementById('clearOrdersBtn');
+if (clearOrdersBtn) {
+  clearOrdersBtn.addEventListener('click', async () => {
+    if (!confirm('Bạn có chắc chắn muốn xóa TOÀN BỘ đơn hàng test trong hệ thống? Hành động này sẽ dọn sạch tất cả dữ liệu đơn hàng và không thể hoàn tác.')) {
+      return;
+    }
+    try {
+      clearOrdersBtn.disabled = true;
+      clearOrdersBtn.textContent = 'Đang xóa...';
+      const res = await fetch('/api/admin/clear-orders', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Không thể xóa toàn bộ đơn');
+      alert('Đã xóa sạch toàn bộ đơn hàng test!');
+      await loadOrders();
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Lỗi khi xóa đơn'));
+    } finally {
+      clearOrdersBtn.disabled = false;
+      clearOrdersBtn.textContent = '🗑 Xóa sạch đơn test';
+    }
+  });
+}
 
 const imageModal = document.getElementById('imageModal');
 const closeImageModalBtn = document.getElementById('closeImageModal');
