@@ -72,15 +72,9 @@ function renderPaidOrderStatus(order) {
         <p><strong>Mã đơn hàng:</strong> ${order.orderCode}</p>
         <p><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
         <p><strong>Trạng thái vé:</strong> ${order.ticketStatus || 'Chưa sử dụng'}</p>
-        <p>QR check-in đã hiển thị trực tiếp trên màn hình. Bạn có thể in hoặc lưu lại để dùng khi vào sự kiện.</p>
-        ${order.qrCodeUrl ? '<button type="button" class="btn btn-primary full-width" id="print-checkin-qr">In QR check-in</button>' : ''}
+        <p>QR check-in đã hiển thị trực tiếp trên màn hình. Bạn có thể chụp màn hình hoặc tải hình ảnh về để dùng khi vào sự kiện.</p>
       </div>
     `;
-
-    const printButton = document.getElementById('print-checkin-qr');
-    if (printButton) {
-      printButton.addEventListener('click', () => window.print());
-    }
   }
 }
 
