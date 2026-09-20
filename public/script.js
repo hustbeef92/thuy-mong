@@ -110,17 +110,13 @@ function renderTickets() {
   container.innerHTML = appState.tickets
     .map((ticket) => `
       <article class="ticket-card">
-        <img src="${ticket.id}.jpg" alt="${ticket.name}" class="ticket-card-img" />
+        <img src="${ticket.image || (ticket.id + '.jpg')}" alt="${ticket.name}" class="ticket-card-img" />
         <div class="ticket-top">
           <h3>${ticket.name}</h3>
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
         </div>
-        <p>${ticket.benefit}</p>
-        <ul class="benefits-list">
-          <li>Nhận quyền lợi theo hạng vé</li>
-          <li>Đăng ký từ 4 ấn phẩm trở lên được giảm 10%</li>
-        </ul>
-        <div class="choose-row">
+        <p>${ticket.description || ticket.benefit || ''}</p>
+        <div class="choose-row" style="margin-top: 16px;">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${ticket.id}" data-type="ticket">−</button>
             <span data-qty="${ticket.id}">1</span>
@@ -141,13 +137,16 @@ function renderMerch() {
   container.innerHTML = appState.merch
     .map((item) => `
       <article class="merch-card">
-        <div class="merch-art" aria-hidden="true">${item.id === 'combo-merch' ? 'COMBO' : 'KHĂN'}</div>
+        ${item.image 
+          ? \`<img src="\${item.image}" alt="\${item.name}" class="ticket-card-img" />\` 
+          : \`<div class="merch-art" aria-hidden="true">\${item.id === 'combo-merch' ? 'COMBO' : 'KHĂN'}</div>\`
+        }
         <div class="ticket-top">
           <h3>${item.name}</h3>
           <span class="ticket-price">${formatCurrency(item.price)}</span>
         </div>
-        <p>${item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.'}</p>
-        <div class="choose-row">
+        <p>${item.description || (item.id === 'combo-merch' ? 'Combo merch gồm quạt, móc khóa, sticker.' : 'Khăn độc quyền sự kiện, có thể áp dụng ưu đãi giảm giá theo hạng vé mua.')}</p>
+        <div class="choose-row" style="margin-top: 16px;">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
             <span data-qty="${item.id}">1</span>
