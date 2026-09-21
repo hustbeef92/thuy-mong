@@ -571,7 +571,7 @@ checkoutForm.addEventListener('submit', async (event) => {
             
             // Ẩn nút xác nhận sau khi thành công
             btnConfirmPayment.style.display = 'none';
-            proofStatusMsg.textContent = '✓ Bạn đã báo Đã thanh toán! Ban tổ chức sẽ kiểm tra và xác nhận sớm.';
+            proofStatusMsg.textContent = '✓ Bạn đã thanh toán! Ban tổ chức sẽ kiểm tra và xác nhận sớm. Nếu trong vòng 12 tiếng kể từ khi đăng ký bạn vẫn chưa nhận được mail xác nhận, hãy nhắn chúng mình qua Fanpage: Thuỷ Mộng';
             proofStatusMsg.style.color = '#2da76d';
             showToast('Đã gửi xác nhận thanh toán!');
             
