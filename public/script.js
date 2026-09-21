@@ -312,11 +312,11 @@ function renderCart() {
   const discountMarkup = summary.discounts.length
     ? `
       <div class="discount-summary">
-        <div class="discount-row"><span>Giá gốc</span><strong>${formatCurrency(summary.subtotal)}</strong></div>
+        <div class="discount-row"><span>Giá gốc: </span><strong>${formatCurrency(summary.subtotal)}</strong></div>
         ${summary.discounts.map((discount) => `
-          <div class="discount-row discount-line"><span>${discount.label}</span><strong>- ${formatCurrency(discount.amount)}</strong></div>
+          <div class="discount-row discount-line"><span>${discount.label}: </span><strong>- ${formatCurrency(discount.amount)}</strong></div>
         `).join('')}
-        <div class="discount-row total-line"><span>Tổng thanh toán</span><strong>${formatCurrency(summary.total)}</strong></div>
+        <div class="discount-row total-line"><span>Tổng thanh toán: </span><strong>${formatCurrency(summary.total)}</strong></div>
       </div>
     `
     : '';
