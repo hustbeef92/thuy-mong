@@ -6,8 +6,6 @@ const totalOrdersEl = document.getElementById('totalOrders');
 const paidOrdersEl = document.getElementById('paidOrders');
 const usedTicketsEl = document.getElementById('usedTickets');
 
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
 const scanResultEl = document.getElementById('scanResult');
 const startScannerBtn = document.getElementById('startScannerBtn');
 const stopScannerBtn = document.getElementById('stopScannerBtn');
@@ -148,45 +146,58 @@ async function loadOrders() {
 statusFilter.addEventListener('change', loadOrders);
 searchInput.addEventListener('input', loadOrders);
 
+let html5QrCode = null;
+
 async function startScanner() {
+  scanResultEl.className = 'scan-result neutral';
+  scanResultEl.textContent = 'Đang mở camera...';
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    video.srcObject = stream;
-    await video.play();
-    scanResultEl.className = 'scan-result neutral';
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qrcode("reader");
+    }
+
+    if (html5QrCode.isScanning) {
+      await html5QrCode.stop();
+    }
+
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 }
+      },
+      async (decodedText, decodedResult) => {
+        // Handle on success
+        if (html5QrCode.getState() === 2) { // 2 = SCANNING
+          html5QrCode.pause();
+        }
+        await submitCheckin(decodedText);
+      },
+      (errorMessage) => {
+        // parse error, ignore
+      }
+    );
     scanResultEl.textContent = 'Camera đã mở. Hãy quét mã QR vé của khách.';
-    captureLoop();
   } catch (error) {
+    console.error(error);
     scanResultEl.className = 'scan-result error';
     scanResultEl.textContent = 'Không thể truy cập camera. Vui lòng cấp quyền truy cập camera.';
   }
 }
 
-async function captureLoop() {
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  
-  const scan = async () => {
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert",
-      });
-
-      if (code && code.data) {
-        await submitCheckin(code.data);
-        return; // Dừng vòng lặp tạm thời khi đã quét được
-      }
+async function stopScanner() {
+  try {
+    if (html5QrCode && html5QrCode.isScanning) {
+      await html5QrCode.stop();
+      scanResultEl.className = 'scan-result neutral';
+      scanResultEl.textContent = 'Camera đã tắt.';
     }
-
-    requestAnimationFrame(scan);
-  };
-
-  requestAnimationFrame(scan);
+  } catch (err) {
+    console.error(err);
+  }
 }
+
 
 async function submitCheckin(qrCode) {
   try {
@@ -216,12 +227,16 @@ async function submitCheckin(qrCode) {
     setTimeout(() => {
       scanResultEl.className = 'scan-result neutral';
       scanResultEl.innerHTML = 'Camera đang chờ quét QR tiếp theo...';
-      captureLoop();
+      if (html5QrCode && html5QrCode.getState() === 3) { // 3 = PAUSED
+        html5QrCode.resume();
+      }
     }, 5000);
   } catch (error) {
     scanResultEl.className = 'scan-result error';
     scanResultEl.textContent = 'Lỗi khi gửi dữ liệu check-in.';
-    setTimeout(() => captureLoop(), 3000);
+    setTimeout(() => {
+      if (html5QrCode && html5QrCode.getState() === 3) html5QrCode.resume();
+    }, 3000);
   }
 }
 
@@ -399,15 +414,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeImageLightbox();
 });
 
-function stopScanner() {
-  if (video.srcObject) {
-    const tracks = video.srcObject.getTracks();
-    tracks.forEach((track) => track.stop());
-    video.srcObject = null;
-  }
-  scanResultEl.className = 'scan-result neutral';
-  scanResultEl.textContent = 'Camera đã dừng.';
-}
+
 
 startScannerBtn.addEventListener('click', startScanner);
 stopScannerBtn.addEventListener('click', stopScanner);

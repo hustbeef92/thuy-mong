@@ -160,9 +160,8 @@
           </div>
 
           <div class="scanner-layout">
-            <div class="camera-box">
-              <video id="video" autoplay playsinline muted></video>
-              <canvas id="canvas" hidden></canvas>
+            <div class="camera-box" style="position: relative; overflow: hidden; background: #000; border-radius: 12px; margin-bottom: 20px;">
+              <div id="reader" style="width: 100%; height: auto; display: block;"></div>
               <div class="scan-overlay"></div>
             </div>
 
