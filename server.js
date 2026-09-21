@@ -1130,6 +1130,50 @@ app.post('/api/admin/clear-orders', async (req, res) => {
   return res.status(200).json({ success: true, message: 'Đã xóa toàn bộ đơn hàng thành công.' });
 });
 
+app.post('/api/admin/cleanup-orders', async (req, res) => {
+  try {
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    let orders = readOrders();
+    const toDeleteCodes = [];
+    
+    orders = orders.filter(o => {
+      const createdTime = new Date(o.createdAt || Date.now()).getTime();
+      const isOld = createdTime < oneHourAgo;
+      const hasNoImage = !o.proofImage;
+      const isUnpaid = o.status !== 'Đã thanh toán';
+      
+      if (isOld && hasNoImage && isUnpaid) {
+        toDeleteCodes.push(o.orderCode);
+        return false;
+      }
+      return true;
+    });
+    
+    writeOrders(orders);
+    
+    if (supabaseEnabled && toDeleteCodes.length > 0) {
+      try {
+        const codesList = toDeleteCodes.map(encodeURIComponent).join(',');
+        await supabaseRequest(`orders?order_code=in.(${codesList})`, { method: 'DELETE' });
+      } catch (err) {
+        console.warn('Supabase cleanup orders failed:', err.message);
+      }
+    }
+    
+    if (toDeleteCodes.length > 0) {
+      inventoryCacheTime = 0;
+    }
+    
+    return res.status(200).json({ 
+      success: true, 
+      message: `Đã dọn dẹp thành công ${toDeleteCodes.length} đơn rác.`,
+      deletedCount: toDeleteCodes.length
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi dọn dẹp đơn hàng: ' + error.message });
+  }
+});
+
 app.delete('/api/admin/orders/:orderCode', async (req, res) => {
   const code = String(req.params.orderCode || '').trim();
   if (!code) {
