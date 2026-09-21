@@ -472,6 +472,12 @@ checkoutForm.addEventListener('submit', async (event) => {
     }
   };
 
+  const submitBtn = checkoutForm.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Đang tạo đơn...';
+  }
+
   try {
     const response = await fetch('/api/orders', {
       method: 'POST',
@@ -572,6 +578,10 @@ checkoutForm.addEventListener('submit', async (event) => {
             appState.cart = [];
             renderCart();
             updateCartButton();
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Thanh toán bằng QR';
+            }
           } catch (err) {
             proofStatusMsg.textContent = 'Lỗi: ' + (err.message || 'Không thể xác nhận');
             proofStatusMsg.style.color = '#e74c3c';
@@ -584,8 +594,15 @@ checkoutForm.addEventListener('submit', async (event) => {
     }
     startPaymentStatusPolling(result.order.orderCode, result.order.customer.email || '');
     showToast('Đơn hàng đã tạo. Vui lòng quét QR để thanh toán.');
+    if (submitBtn) {
+      submitBtn.textContent = 'Kéo xuống dưới để quét QR';
+    }
     document.getElementById('checkout').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Thanh toán bằng QR';
+    }
     showToast(error.message || 'Có lỗi xảy ra khi đặt vé.');
   }
 });
