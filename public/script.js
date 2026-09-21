@@ -119,8 +119,10 @@ function getTicketImageSrc(ticket) {
 function renderTickets() {
   const container = document.getElementById('ticket-grid');
   container.innerHTML = appState.tickets
-    .map((ticket) => `
-      <article class="ticket-card">
+    .map((ticket) => {
+      const isSoldOut = ticket.quantity !== undefined && ticket.quantity <= 0;
+      return `
+      <article class="ticket-card ${isSoldOut ? 'sold-out' : ''}">
         <img src="${getTicketImageSrc(ticket)}" alt="${ticket.name}" class="ticket-card-img" />
         <div class="ticket-top">
           <h3>${ticket.name}</h3>
@@ -128,15 +130,19 @@ function renderTickets() {
         </div>
         <p>${ticket.description || ticket.benefit || ''}</p>
         <div class="choose-row" style="margin-top: 16px;">
-          <div class="qty-control">
-            <button type="button" class="qty-btn" data-action="decrease" data-id="${ticket.id}" data-type="ticket">−</button>
-            <span data-qty="${ticket.id}">1</span>
-            <button type="button" class="qty-btn" data-action="increase" data-id="${ticket.id}" data-type="ticket">+</button>
-          </div>
-          <button class="add-to-cart" data-add="${ticket.id}" data-type="ticket">Thêm</button>
+          ${isSoldOut 
+            ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết vé</span>'
+            : `<div class="qty-control">
+                <button type="button" class="qty-btn" data-action="decrease" data-id="${ticket.id}" data-type="ticket">−</button>
+                <span data-qty="${ticket.id}">1</span>
+                <button type="button" class="qty-btn" data-action="increase" data-id="${ticket.id}" data-type="ticket">+</button>
+              </div>
+              <button class="add-to-cart" data-add="${ticket.id}" data-type="ticket">Thêm</button>`
+          }
         </div>
       </article>
-    `)
+    `;
+    })
     .join('');
 
   bindQuantityButtons(container);

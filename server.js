@@ -538,10 +538,62 @@ async function sendResendEmail(order) {
 
 // API Quản lý Mặt Hàng (Admin) - Được định nghĩa ở cuối file
 
-app.get('/api/config', (req, res) => {
+let inventoryCache = null;
+let inventoryCacheTime = 0;
+
+async function getInventory() {
+  const now = Date.now();
+  if (inventoryCache && (now - inventoryCacheTime < 60000)) {
+    return inventoryCache;
+  }
+
+  let orders = readOrders();
+  if (supabaseEnabled) {
+    try {
+      const rows = await supabaseRequest('orders?select=order_data');
+      if (Array.isArray(rows)) {
+        orders = rows.map(r => r.order_data).filter(Boolean);
+      }
+    } catch (e) {
+      console.warn("Error fetching remote orders for inventory:", e.message);
+    }
+  }
+
+  const soldQuantities = {};
+  orders.forEach(order => {
+    if (order.status === 'Đã thanh toán' || order.status === 'Chờ thanh toán' || !order.status) {
+      if (order.cart && Array.isArray(order.cart.items)) {
+        order.cart.items.forEach(cartItem => {
+          soldQuantities[cartItem.id] = (soldQuantities[cartItem.id] || 0) + (Number(cartItem.quantity) || 0);
+        });
+      }
+    }
+  });
+
+  inventoryCache = soldQuantities;
+  inventoryCacheTime = now;
+  return inventoryCache;
+}
+
+app.get('/api/config', async (req, res) => {
   const allItems = readItems();
-  const ticketTypes = allItems.filter(i => i.type === 'ticket');
-  const merchItems = allItems.filter(i => i.type === 'merch');
+  const soldQuantities = await getInventory();
+
+  const ticketTypes = allItems.filter(i => i.type === 'ticket').map(ticket => {
+    if (ticket.baseQuantity !== undefined) {
+      const sold = soldQuantities[ticket.id] || 0;
+      ticket.quantity = Math.max(0, ticket.baseQuantity - sold);
+    }
+    return ticket;
+  });
+  
+  const merchItems = allItems.filter(i => i.type === 'merch').map(merch => {
+    if (merch.baseQuantity !== undefined) {
+      const sold = soldQuantities[merch.id] || 0;
+      merch.quantity = Math.max(0, merch.baseQuantity - sold);
+    }
+    return merch;
+  });
 
   res.json({
     eventName: 'Thủy Mộng',
@@ -640,6 +692,7 @@ app.post('/api/orders', async (req, res) => {
   }
 
   await saveOrderPersistent(order);
+  inventoryCacheTime = 0;
 
   // Gửi webhook tới Google Sheet
   const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
@@ -1012,6 +1065,7 @@ app.post('/api/admin/clear-orders', async (req, res) => {
       console.warn('Supabase clear orders failed:', err.message);
     }
   }
+  inventoryCacheTime = 0;
   return res.status(200).json({ success: true, message: 'Đã xóa toàn bộ đơn hàng thành công.' });
 });
 
@@ -1036,6 +1090,7 @@ app.delete('/api/admin/orders/:orderCode', async (req, res) => {
     }
   }
 
+  inventoryCacheTime = 0;
   return res.status(200).json({ success: true, message: `Đã xóa đơn hàng ${code}.` });
 });
 
