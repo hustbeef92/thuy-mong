@@ -33,17 +33,17 @@
   },
   {
     "id": "combo-merch",
-    "name": "Combo merch (Quạt, Móc khóa, Sticker)",
-    "price": 150000,
-    "benefit": "",
+    "name": "[Pre-order] Combo merch độc quyền sự kiện",
+    "price": 35000,
+    "benefit": "Quạt, móc khoá, sticker độc quyền",
     "type": "merch",
     "image": ""
   },
   {
     "id": "khan",
-    "name": "Khăn độc quyền sự kiện",
-    "price": 120000,
-    "benefit": "",
+    "name": "[Pre-order] Khăn Bandana độc quyền sự kiện",
+    "price": 119000,
+    "benefit": "Size 60x60cm. Có thể áp dụng ưu đãi giảm giá theo hạng vé",
     "type": "merch",
     "image": ""
   }
