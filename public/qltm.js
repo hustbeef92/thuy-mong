@@ -144,38 +144,28 @@ async function loadOrders() {
 statusFilter.addEventListener('change', loadOrders);
 searchInput.addEventListener('input', loadOrders);
 
-let html5QrCode = null;
+let qrScanner = null;
 
 async function startScanner() {
   scanResultEl.className = 'scan-result neutral';
   scanResultEl.textContent = 'Đang mở camera...';
 
   try {
-    if (!html5QrCode) {
-      html5QrCode = new Html5Qrcode("reader");
-    }
-
-    if (html5QrCode.isScanning) {
-      await html5QrCode.stop();
-    }
-
-    await html5QrCode.start(
-      { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 }
-      },
-      async (decodedText, decodedResult) => {
-        // Handle on success
-        if (html5QrCode.getState() === 2) { // 2 = SCANNING
-          html5QrCode.pause();
+    const videoElem = document.getElementById('qr-video');
+    if (!qrScanner) {
+      qrScanner = new QrScanner(
+        videoElem,
+        async (result) => {
+          qrScanner.stop();
+          await submitCheckin(result.data || result);
+        },
+        {
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
         }
-        await submitCheckin(decodedText);
-      },
-      (errorMessage) => {
-        // parse error, ignore
-      }
-    );
+      );
+    }
+    await qrScanner.start();
     scanResultEl.textContent = 'Camera đã mở. Hãy quét mã QR vé của khách.';
   } catch (error) {
     console.error(error);
@@ -186,8 +176,8 @@ async function startScanner() {
 
 async function stopScanner() {
   try {
-    if (html5QrCode && html5QrCode.isScanning) {
-      await html5QrCode.stop();
+    if (qrScanner) {
+      qrScanner.stop();
       scanResultEl.className = 'scan-result neutral';
       scanResultEl.textContent = 'Camera đã tắt.';
     }
@@ -195,7 +185,6 @@ async function stopScanner() {
     console.error(err);
   }
 }
-
 
 async function submitCheckin(qrCode) {
   try {
@@ -225,15 +214,15 @@ async function submitCheckin(qrCode) {
     setTimeout(() => {
       scanResultEl.className = 'scan-result neutral';
       scanResultEl.innerHTML = 'Camera đang chờ quét QR tiếp theo...';
-      if (html5QrCode && html5QrCode.getState() === 3) { // 3 = PAUSED
-        html5QrCode.resume();
+      if (qrScanner) {
+        qrScanner.start();
       }
     }, 5000);
   } catch (error) {
     scanResultEl.className = 'scan-result error';
     scanResultEl.textContent = 'Lỗi khi gửi dữ liệu check-in.';
     setTimeout(() => {
-      if (html5QrCode && html5QrCode.getState() === 3) html5QrCode.resume();
+      if (qrScanner) qrScanner.start();
     }, 3000);
   }
 }
