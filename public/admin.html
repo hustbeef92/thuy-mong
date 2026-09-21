@@ -10,13 +10,38 @@
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="stylesheet" href="/assets/admin.css" />
     <script>
-      const password = prompt("Vui lòng nhập mật khẩu trang quản trị:");
-      if (password !== "madebyhust") {
-        window.location.href = "/";
+      // Check auth before rendering
+      if (sessionStorage.getItem('adminAuth') !== 'true') {
+        document.documentElement.style.display = 'none'; // Hide everything temporarily
+        window.addEventListener('DOMContentLoaded', () => {
+          document.documentElement.style.display = '';
+          document.getElementById('authOverlay').style.display = 'flex';
+        });
       }
     </script>
   </head>
   <body class="admin-body">
+    <!-- Auth Overlay for Mobile Support -->
+    <div id="authOverlay" style="display: none; position: fixed; inset: 0; background: #f3f4f6; z-index: 99999; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+      <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%;">
+        <h2 style="margin-top: 0; margin-bottom: 20px; font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--gold);">Quản Trị Thủy Mộng</h2>
+        <input type="password" id="authPassword" placeholder="Nhập mật khẩu..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; box-sizing: border-box; font-size: 16px;" />
+        <button id="authSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 12px;">Đăng nhập</button>
+      </div>
+    </div>
+    
+    <script>
+      document.getElementById('authSubmitBtn').addEventListener('click', () => {
+        const pwd = document.getElementById('authPassword').value;
+        if (pwd === "madebyhust") {
+          sessionStorage.setItem('adminAuth', 'true');
+          document.getElementById('authOverlay').style.display = 'none';
+        } else {
+          alert('Mật khẩu sai!');
+        }
+      });
+    </script>
+
     <div class="admin-shell">
       <aside class="admin-sidebar">
         <div class="brand-block admin-brand">
