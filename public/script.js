@@ -311,12 +311,21 @@ function renderCart() {
 
   const discountMarkup = summary.discounts.length
     ? `
-      <div class="discount-summary">
-        <div class="discount-row"><span>Giá gốc: </span><strong>${formatCurrency(summary.subtotal)}</strong></div>
+      <div class="discount-summary" style="margin-top: 16px;">
+        <div class="discount-row" style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95em; color: rgba(246, 242, 234, 0.8);">
+          <span>Giá gốc:</span>
+          <strong>${formatCurrency(summary.subtotal)}</strong>
+        </div>
         ${summary.discounts.map((discount) => `
-          <div class="discount-row discount-line"><span>${discount.label}: </span><strong>- ${formatCurrency(discount.amount)}</strong></div>
+          <div class="discount-row discount-line" style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.95em; color: #c99a61;">
+            <span>${discount.label}:</span>
+            <strong>- ${formatCurrency(discount.amount)}</strong>
+          </div>
         `).join('')}
-        <div class="discount-row total-line"><span>Tổng thanh toán: </span><strong>${formatCurrency(summary.total)}</strong></div>
+        <div class="discount-row total-line" style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(241, 198, 107, 0.3); font-size: 1.1em; color: #f1c66b;">
+          <span>Tổng thanh toán:</span>
+          <strong>${formatCurrency(summary.total)}</strong>
+        </div>
       </div>
     `
     : '';
