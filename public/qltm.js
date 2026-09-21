@@ -623,24 +623,3 @@ itemForm.addEventListener('submit', async (e) => {
 
 loadOrders();
 // setInterval(loadOrders, 5000);
-
-const syncSheetBtn = document.getElementById('syncSheetBtn');
-if (syncSheetBtn) {
-  syncSheetBtn.addEventListener('click', async () => {
-    if (!confirm('Bạn có chắc chắn muốn đồng bộ toàn bộ đơn hàng lên Google Sheet không? Quá trình này có thể mất vài giây.')) return;
-    
-    syncSheetBtn.disabled = true;
-    syncSheetBtn.textContent = 'Đang đồng bộ...';
-    try {
-      const res = await fetch('/api/admin/sync-sheet', { method: 'POST' });
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      alert(`Đồng bộ hoàn tất!\nThành công: ${data.successCount} đơn\nLỗi: ${data.errorCount} đơn`);
-    } catch (err) {
-      alert('Lỗi đồng bộ: ' + err.message);
-    } finally {
-      syncSheetBtn.disabled = false;
-      syncSheetBtn.textContent = '☁️ Đồng bộ Sheet';
-    }
-  });
-}

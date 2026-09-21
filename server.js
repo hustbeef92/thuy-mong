@@ -1047,6 +1047,28 @@ app.get('/api/admin/orders', async (req, res) => {
             });
           }
         });
+        
+        // Tự động đồng bộ các đơn có trong web nhưng chưa có trong Sheet
+        const missingOrders = allOrders.filter(o => o.orderCode && !sheetOrderMap.has(o.orderCode));
+        if (missingOrders.length > 0) {
+          console.log(`Đang tự động đồng bộ ${missingOrders.length} đơn sang Sheet...`);
+          // Chạy ngầm
+          (async () => {
+            for (const order of missingOrders) {
+              try {
+                const orderPayload = { ...order, sendEmail: order.emailSent ? false : order.sendEmail || false };
+                await fetchWithTimeout(sheetWebhookUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(orderPayload)
+                }, 5000);
+                await new Promise(r => setTimeout(r, 400));
+              } catch (e) {
+                console.warn(`Lỗi auto-sync đơn ${order.orderCode}:`, e.message);
+              }
+            }
+          })();
+        }
       }
     }
   } catch (err) {
