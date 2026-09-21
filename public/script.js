@@ -159,7 +159,7 @@ function renderTickets() {
             ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết vé</span>'
             : `<div class="qty-control">
                 <button type="button" class="qty-btn" data-action="decrease" data-id="${ticket.id}" data-type="ticket">−</button>
-                <input type="number" class="qty-input" data-qty="${ticket.id}" data-type="ticket" value="1" min="1" max="${ticket.quantity !== undefined ? ticket.quantity : 999}" style="width: 40px; text-align: center; border: 1px solid #ccc; border-radius: 4px; margin: 0 8px;"/>
+                <input type="number" class="qty-input" data-qty="${ticket.id}" data-type="ticket" value="1" min="1" max="${ticket.quantity !== undefined ? ticket.quantity : 999}" />
                 <button type="button" class="qty-btn" data-action="increase" data-id="${ticket.id}" data-type="ticket">+</button>
               </div>
               <button class="add-to-cart" data-add="${ticket.id}" data-type="ticket">Thêm</button>`
@@ -194,7 +194,7 @@ function renderMerch() {
         <div class="choose-row" style="margin-top: 16px;">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
-            <input type="number" class="qty-input" data-qty="${item.id}" data-type="merch" value="1" min="1" max="${item.quantity !== undefined ? item.quantity : 999}" style="width: 40px; text-align: center; border: 1px solid #ccc; border-radius: 4px; margin: 0 8px;"/>
+            <input type="number" class="qty-input" data-qty="${item.id}" data-type="merch" value="1" min="1" max="${item.quantity !== undefined ? item.quantity : 999}" />
             <button type="button" class="qty-btn" data-action="increase" data-id="${item.id}" data-type="merch">+</button>
           </div>
           <button class="add-to-cart" data-add="${item.id}" data-type="merch">Thêm</button>

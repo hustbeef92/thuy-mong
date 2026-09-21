@@ -1519,6 +1519,201 @@ body .cart-item,
 body .qty-control,
 body .cart-qty-btn,
 body .cart-remove {
+  right: 24px;
+  bottom: 24px;
+  background: rgba(32, 26, 22, 0.9);
+  color: #fff;
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 980px) {
+  .hero-grid,
+  .checkout-grid,
+  .story-grid,
+  .ticket-grid,
+  .merch-grid,
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .main-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-copy h1 {
+    font-size: clamp(2.8rem, 13vw, 4.2rem);
+    line-height: 1;
+  }
+
+  .nav-wrap {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 10px 0;
+    min-height: auto;
+    gap: 10px;
+  }
+
+  .brand-block {
+    min-width: 0;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-meta span {
+    font-size: 13px;
+  }
+
+  .header-meta .btn {
+    padding: 0.55rem 0.9rem;
+    font-size: 13px;
+    width: auto;
+  }
+
+  .ticket-grid,
+  .merch-grid,
+  .story-grid,
+  .checkout-grid,
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: 100%;
+  }
+
+  .stats-row strong {
+    font-size: clamp(1.1rem, 4.2vw, 1.45rem);
+    white-space: nowrap;
+  }
+
+  .ticket-card,
+  .merch-card,
+  .story-card,
+  .cart-panel,
+  .checkout-panel {
+    padding: 16px;
+    border-radius: 18px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cart-item-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .image-card img {
+    height: 360px;
+  }
+
+  .floating-card {
+    position: static;
+    margin-top: 16px;
+    max-width: 100%;
+  }
+
+  .cta-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 0.85rem 1.4rem;
+  }
+
+  .proof-upload-box input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .proof-upload-box button {
+    width: 100%;
+  }
+}
+
+/* Final theme override: keep the full page in the hero palette. */
+body .section,
+body .tickets-section,
+body .merch-section,
+body .cart-section {
+  background: linear-gradient(180deg, #071a1d 0%, #0b2528 100%) !important;
+  color: var(--text) !important;
+}
+
+body .ticket-card,
+body .merch-card,
+body .story-card,
+body .cart-panel,
+body .checkout-panel {
+  background: linear-gradient(155deg, rgba(18, 67, 67, 0.98), rgba(7, 28, 31, 0.98)) !important;
+  border-color: rgba(241, 198, 107, 0.42) !important;
+  color: var(--gold-soft) !important;
+}
+
+body .ticket-card h3,
+body .ticket-card p,
+body .ticket-card li,
+body .ticket-card .ticket-price,
+body .merch-card h3,
+body .merch-card p,
+body .merch-card .ticket-price,
+body .story-card h3,
+body .story-card p,
+body .cart-panel h3,
+body .checkout-panel h3,
+body .cart-item,
+body .cart-item strong,
+body .cart-summary span,
+body .cart-summary strong,
+body .field-group label {
+  color: var(--gold-soft) !important;
+}
+
+body .ticket-card .ticket-price,
+body .merch-card .ticket-price,
+body .cart-summary strong {
+  color: var(--gold) !important;
+}
+
+body .field-group input,
+body .field-group select,
+body .cart-item,
+body .qty-control,
+body .cart-qty-btn,
+body .cart-remove {
   background: #06191c !important;
   border-color: rgba(241, 198, 107, 0.3) !important;
   color: var(--gold-soft) !important;
@@ -1528,5 +1723,31 @@ body .site-footer {
   background: #041316 !important;
   color: var(--gold-soft) !important;
 }
-. t i c k e t - c a r d . s o l d - o u t   {   o p a c i t y :   0 . 6 ;   p o i n t e r - e v e n t s :   n o n e ;   }   . t i c k e t - c a r d . s o l d - o u t   . t i c k e t - p r i c e   {   t e x t - d e c o r a t i o n :   l i n e - t h r o u g h ;   }  
- 
+
+.ticket-card.sold-out { opacity: 0.6; pointer-events: none; }
+.ticket-card.sold-out .ticket-price { text-decoration: line-through; }
+
+.qty-control .qty-input {
+  width: 40px;
+  height: 34px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0;
+  margin: 0;
+  -moz-appearance: textfield;
+}
+
+.qty-control .qty-input::-webkit-outer-spin-button,
+.qty-control .qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qty-control .qty-input:focus {
+  outline: none;
+}
