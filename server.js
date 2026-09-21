@@ -1033,7 +1033,7 @@ app.get('/api/admin/orders', async (req, res) => {
         // Thêm các đơn chỉ có trong Sheet
         const localCodes = new Set(allOrders.map(o => o.orderCode));
         sheetData.forEach(o => {
-          if (!localCodes.has(o.orderCode)) {
+          if (o.orderCode && String(o.orderCode).trim() !== '' && !localCodes.has(o.orderCode)) {
             allOrders.push({
               id: o.orderCode,
               orderCode: o.orderCode,
