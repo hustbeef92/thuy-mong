@@ -441,7 +441,7 @@ async function sendGmailSmtpEmail(order) {
           <p style="margin: 6px 0;"><strong>Các mặt hàng:</strong> ${itemsList || '—'}</p>
           <p style="margin: 6px 0;"><strong>Nơi nhận hàng:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</p>
           <p style="margin: 6px 0;"><strong>Tổng tiền:</strong> <span style="color: #c99a61; font-weight: bold; font-size: 1.1em;">${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.total)}</span></p>
-          <p style="margin: 6px 0;"><strong>Hết giờ check in:</strong> 19:35 — Thứ Bảy, 17/10/2026</p>
+          <p style="margin: 6px 0;"><strong>Giờ check in:</strong> 17:30 - 19:35 — Thứ Bảy, 17/10/2026</p>
           <p style="margin: 6px 0;"><strong>Địa điểm:</strong> Nhà Hát Múa Rối Việt Nam, 361 Trường Chinh, Thanh Xuân, Hà Nội</p>
         </div>
 
