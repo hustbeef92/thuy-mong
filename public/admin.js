@@ -164,16 +164,21 @@ async function startScanner() {
 
 async function captureLoop() {
   const context = canvas.getContext('2d', { willReadFrequently: true });
+  
   const scan = async () => {
-    if (video.readyState >= 2) {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const code = await decodeFromCanvas(imageData, canvas.width, canvas.height);
-      if (code) {
-        await submitCheckin(code);
-        return;
+      
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
+      });
+
+      if (code && code.data) {
+        await submitCheckin(code.data);
+        return; // Dừng vòng lặp tạm thời khi đã quét được
       }
     }
 
@@ -181,17 +186,6 @@ async function captureLoop() {
   };
 
   requestAnimationFrame(scan);
-}
-
-async function decodeFromCanvas(imageData, width, height) {
-  try {
-    const { BrowserQRCodeReader } = await import('https://cdn.jsdelivr.net/npm/@zxing/browser@latest/esm/index.js');
-    const reader = new BrowserQRCodeReader();
-    const result = await reader.decodeFromImageBitmap(createImageBitmap(new ImageData(imageData.data, width, height)));
-    return result?.getText?.() || null;
-  } catch (error) {
-    return null;
-  }
 }
 
 async function submitCheckin(qrCode) {
@@ -222,10 +216,12 @@ async function submitCheckin(qrCode) {
     setTimeout(() => {
       scanResultEl.className = 'scan-result neutral';
       scanResultEl.innerHTML = 'Camera đang chờ quét QR tiếp theo...';
+      captureLoop();
     }, 5000);
   } catch (error) {
     scanResultEl.className = 'scan-result error';
     scanResultEl.textContent = 'Lỗi khi gửi dữ liệu check-in.';
+    setTimeout(() => captureLoop(), 3000);
   }
 }
 
