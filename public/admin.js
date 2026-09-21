@@ -22,9 +22,9 @@ const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
 
 function formatScanInfo(order = {}) {
   const customer = order.customer || {};
-  const items = Array.isArray(order.items) && order.items.length
+  const items = (Array.isArray(order.items) && order.items.length)
     ? order.items.map((item) => `${item.name} x${item.quantity}`).join(', ')
-    : '—';
+    : (order.itemsStr || '—');
 
   return `
     <div class="scan-info-wrap">
@@ -222,7 +222,7 @@ async function submitCheckin(qrCode) {
     setTimeout(() => {
       scanResultEl.className = 'scan-result neutral';
       scanResultEl.innerHTML = 'Camera đang chờ quét QR tiếp theo...';
-    }, 3000);
+    }, 5000);
   } catch (error) {
     scanResultEl.className = 'scan-result error';
     scanResultEl.textContent = 'Lỗi khi gửi dữ liệu check-in.';
