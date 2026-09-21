@@ -1133,7 +1133,7 @@ body .add-to-cart:hover {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: auto;
 }
 
 .qty-control {
@@ -1731,9 +1731,9 @@ body .site-footer {
   width: 40px;
   height: 34px;
   text-align: center;
-  border: none;
-  background: transparent;
-  color: inherit;
+  border: none !important;
+  background: transparent !important;
+  color: inherit !important;
   font-weight: 700;
   font-family: inherit;
   font-size: 1rem;

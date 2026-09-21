@@ -154,7 +154,7 @@ function renderTickets() {
           <span class="ticket-price">${formatCurrency(ticket.price)}</span>
         </div>
         <p>${ticket.description || ticket.benefit || ''}</p>
-        <div class="choose-row" style="margin-top: 16px;">
+        <div class="choose-row">
           ${isSoldOut 
             ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết vé</span>'
             : `<div class="qty-control">
@@ -191,7 +191,7 @@ function renderMerch() {
           <span class="ticket-price">${formatCurrency(item.price)}</span>
         </div>
         <p>${getMerchDesc(item)}</p>
-        <div class="choose-row" style="margin-top: 16px;">
+        <div class="choose-row">
           <div class="qty-control">
             <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
             <input type="number" class="qty-input" data-qty="${item.id}" data-type="merch" value="1" min="1" max="${item.quantity !== undefined ? item.quantity : 999}" />
