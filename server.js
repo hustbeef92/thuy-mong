@@ -1302,9 +1302,19 @@ app.post('/api/orders/:orderCode/resend-email', async (req, res) => {
 });
 
 // API Quản lý mặt hàng (Items)
-app.get('/api/admin/items', (req, res) => {
+app.get('/api/admin/items', async (req, res) => {
   const items = readItems();
-  res.json(items);
+  const soldQuantities = await getInventory();
+
+  const updatedItems = items.map(item => {
+    if (item.baseQuantity !== undefined) {
+      const sold = soldQuantities[item.id] || 0;
+      item.quantity = Math.max(0, item.baseQuantity - sold);
+    }
+    return item;
+  });
+
+  res.json(updatedItems);
 });
 
 app.post('/api/admin/items', (req, res) => {
@@ -1317,13 +1327,21 @@ app.post('/api/admin/items', (req, res) => {
   const index = items.findIndex(i => i.id === newItem.id);
   
   if (index !== -1) {
+    if (newItem.quantity !== undefined) {
+      newItem.baseQuantity = newItem.quantity;
+      delete newItem.quantity;
+    }
     items[index] = { ...items[index], ...newItem };
   } else {
+    if (newItem.quantity !== undefined) {
+      newItem.baseQuantity = newItem.quantity;
+      delete newItem.quantity;
+    }
     items.push(newItem);
   }
   
   if (saveItems(items)) {
-    res.json({ success: true, item: newItem });
+    res.json({ success: true, item: items[index !== -1 ? index : items.length - 1] });
   } else {
     res.status(500).json({ error: 'Không thể lưu mặt hàng.' });
   }
