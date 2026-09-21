@@ -641,6 +641,18 @@ app.post('/api/orders', async (req, res) => {
 
   await saveOrderPersistent(order);
 
+  // Gửi webhook tới Google Sheet
+  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  try {
+    await fetchWithTimeout(sheetWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    }, 5000);
+  } catch (err) {
+    console.error('Lỗi gửi dữ liệu về Sheet:', err.message);
+  }
+
   res.status(201).json({
     message: 'Đặt vé thành công!',
     order,
@@ -859,6 +871,18 @@ async function confirmOrderPaid(orderCode) {
   order.qrCodeUrl = order.qrCodeUrl || createQrCodeUrl(order);
 
   await saveOrderPersistent(order);
+
+  // Gửi webhook cập nhật tới Google Sheet
+  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  try {
+    await fetchWithTimeout(sheetWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    }, 5000);
+  } catch (err) {
+    console.error('Lỗi gửi cập nhật về Sheet:', err.message);
+  }
 
   try {
     const emailResult = await sendResendEmail(order);
