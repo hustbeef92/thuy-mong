@@ -696,7 +696,7 @@ app.post('/api/orders', async (req, res) => {
   inventoryCacheTime = 0;
 
   // Gửi webhook tới Google Sheet
-  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
   try {
     await fetchWithTimeout(sheetWebhookUrl, {
       method: 'POST',
@@ -929,7 +929,7 @@ async function confirmOrderPaid(orderCode) {
   await saveOrderPersistent(order);
 
   // Gửi webhook cập nhật tới Google Sheet
-  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
   try {
     await fetchWithTimeout(sheetWebhookUrl, {
       method: 'POST',
@@ -973,7 +973,7 @@ app.get('/api/admin/orders', async (req, res) => {
   }
 
   // Thử lấy từ Google Sheet (qua doGet)
-  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
   try {
     const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 8000);
     if (sheetRes.ok) {
