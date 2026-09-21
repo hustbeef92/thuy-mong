@@ -94,12 +94,10 @@ async function loadOrders() {
         } else if (order.emailError) {
           emailStatusHtml = `
             <div class="email-status fail" title="${order.emailError.replace(/"/g, '&quot;')}">⚠ Lỗi gửi mail</div>
-            <button type="button" class="btn-resend-email" data-resend-order="${order.orderCode}">Gửi lại mail</button>
           `;
         } else {
           emailStatusHtml = `
             <div class="email-status" style="color: var(--muted);">Chưa gửi mail</div>
-            <button type="button" class="btn-resend-email" data-resend-order="${order.orderCode}">Gửi mail QR</button>
           `;
         }
       }
@@ -312,29 +310,7 @@ ordersTableBody.addEventListener('click', async (event) => {
     return;
   }
 
-  const resendBtn = event.target.closest('.btn-resend-email');
-  if (resendBtn) {
-    const orderCode = resendBtn.dataset.resendOrder;
-    if (!orderCode) return;
-    try {
-      resendBtn.disabled = true;
-      resendBtn.textContent = 'Đang gửi...';
-      const res = await fetch('/api/admin/resend-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderCode })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Gửi lại email thất bại');
-      alert('Đã gửi lại email QR check-in thành công!');
-      await loadOrders();
-    } catch (err) {
-      alert('Lỗi: ' + (err.message || 'Không thể gửi email'));
-    } finally {
-      resendBtn.disabled = false;
-      resendBtn.textContent = 'Gửi lại mail';
-    }
-  }
+
 });
 
 const refreshOrdersBtn = document.getElementById('refreshOrdersBtn');

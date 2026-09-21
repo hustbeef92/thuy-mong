@@ -798,12 +798,14 @@ function normalizeGoogleSheetRecord(row = {}) {
   const amount = Number(values.amount ?? values.total ?? values['Số tiền'] ?? values.amountVnd ?? values.money ?? values.transferAmount ?? 0);
   const status = String(values.status || values['Trạng thái'] || values.paymentStatus || '').trim().toLowerCase();
   const content = String(values.transferContent || values['Nội dung'] || values.content || values.description || '').trim();
+  const sendEmail = values.sendEmail || values['Gửi mail'] || values['Gửi Email'] || false;
 
   return {
     orderCode,
     amount,
     status,
-    content
+    content,
+    sendEmail
   };
 }
 
@@ -982,14 +984,50 @@ app.get('/api/admin/orders', async (req, res) => {
           if (o.orderCode) sheetOrderMap.set(o.orderCode, o);
         });
         
-        allOrders = allOrders.map(o => {
+        allOrders = await Promise.all(allOrders.map(async o => {
           if (sheetOrderMap.has(o.orderCode)) {
             const so = sheetOrderMap.get(o.orderCode);
             // Ghi đè trạng thái từ Sheet
-            return { ...o, status: so.status || o.status };
+            const newStatus = so.status || o.status;
+            let oEmailSent = o.emailSent;
+            let oEmailError = o.emailError;
+
+            const sendEmailChecked = so.sendEmail === true || String(so.sendEmail).trim().toLowerCase() === 'true';
+
+            if (sendEmailChecked && !oEmailSent && newStatus === 'Đã thanh toán') {
+              try {
+                // Tự động gửi mail khi check box trong sheet
+                const emailResult = await sendResendEmail(o);
+                oEmailSent = !emailResult.skipped;
+                o.emailId = emailResult.id || null;
+                oEmailError = null;
+
+                const localO = await findOrderPersistent(o.orderCode);
+                if (localO) {
+                  localO.emailSent = oEmailSent;
+                  localO.emailId = o.emailId;
+                  delete localO.emailError;
+                  await saveOrderPersistent(localO);
+                }
+              } catch (err) {
+                oEmailError = err.message;
+                const localO = await findOrderPersistent(o.orderCode);
+                if (localO) {
+                  localO.emailError = oEmailError;
+                  await saveOrderPersistent(localO);
+                }
+              }
+            }
+
+            return { 
+              ...o, 
+              status: newStatus,
+              emailSent: oEmailSent,
+              emailError: oEmailError
+            };
           }
           return o;
-        });
+        }));
 
         // Thêm các đơn chỉ có trong Sheet
         const localCodes = new Set(allOrders.map(o => o.orderCode));
