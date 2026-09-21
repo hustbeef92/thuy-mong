@@ -679,6 +679,7 @@ app.post('/api/orders', async (req, res) => {
     createdAt: now,
     qrCodeUrl: null,
     emailSent: false,
+    sendEmail: false, // Thêm trường gửi mail mặc định
     checkedInAt: null,
     proofImage: proofImage || null,
     proofUploadedAt: proofImage ? now : null
