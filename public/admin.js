@@ -66,7 +66,9 @@ async function loadOrders() {
       const deliveryLocation = order.deliveryLocation || 'Nhận tại sự kiện';
       const isNeu = deliveryLocation.toLowerCase().includes('neu');
       const deliveryBadgeClass = isNeu ? 'neu' : 'event';
-      const itemsText = (order.items || []).map((item) => `${item.name} x${item.quantity}`).join(', ');
+      const itemsText = (order.items && order.items.length) 
+        ? order.items.map((item) => `${item.name} x${item.quantity}`).join(', ')
+        : (order.itemsStr || '');
       const statusClass = order.status === 'Đã thanh toán' ? 'paid' : 'pending';
       const ticketClass = order.ticketStatus === 'Đã sử dụng' ? 'used' : 'pending';
       const confirmButton = order.status !== 'Đã thanh toán'

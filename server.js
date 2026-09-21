@@ -899,9 +899,67 @@ async function confirmOrderPaid(orderCode) {
   return order;
 }
 
-app.get('/api/admin/orders', (req, res) => {
+app.get('/api/admin/orders', async (req, res) => {
   const { status, search } = req.query;
-  const allOrders = readOrders();
+  
+  // Lấy danh sách local trước
+  const localOrders = readOrders();
+  let allOrders = [...localOrders];
+
+  // Thử lấy thêm từ Supabase nếu có
+  if (supabaseEnabled) {
+    try {
+      const remoteOrders = await readOrdersPersistent();
+      allOrders = remoteOrders;
+    } catch (e) {
+      console.warn('Lỗi lấy từ Supabase:', e);
+    }
+  }
+
+  // Thử lấy từ Google Sheet (qua doGet)
+  const sheetWebhookUrl = 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+  try {
+    const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 8000);
+    if (sheetRes.ok) {
+      const sheetData = await sheetRes.json();
+      if (Array.isArray(sheetData) && sheetData.length > 0) {
+        // Gộp dữ liệu từ Sheet (ưu tiên Sheet)
+        const sheetOrderMap = new Map();
+        sheetData.forEach(o => {
+          if (o.orderCode) sheetOrderMap.set(o.orderCode, o);
+        });
+        
+        allOrders = allOrders.map(o => {
+          if (sheetOrderMap.has(o.orderCode)) {
+            const so = sheetOrderMap.get(o.orderCode);
+            // Ghi đè trạng thái từ Sheet
+            return { ...o, status: so.status || o.status };
+          }
+          return o;
+        });
+
+        // Thêm các đơn chỉ có trong Sheet
+        const localCodes = new Set(allOrders.map(o => o.orderCode));
+        sheetData.forEach(o => {
+          if (!localCodes.has(o.orderCode)) {
+            allOrders.push({
+              id: o.orderCode,
+              orderCode: o.orderCode,
+              customer: o.customer || {},
+              deliveryLocation: o.deliveryLocation || '',
+              status: o.status || 'Chờ thanh toán',
+              total: o.total || 0,
+              createdAt: o.createdAt || new Date().toISOString(),
+              items: [], // Chỉ để hiển thị admin
+              itemsStr: o.itemsStr || ''
+            });
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Không thể kéo dữ liệu từ Google Sheet:', err.message);
+  }
 
   const filteredOrders = allOrders.filter((order) => {
     const matchesStatus = !status || status === 'all' || order.status === status;
