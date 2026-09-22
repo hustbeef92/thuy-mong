@@ -6,7 +6,7 @@
     "benefit": "Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.",
     "type": "ticket",
     "image": "",
-    "baseQuantity": 54
+    "baseQuantity": 53
   },
   {
     "id": "thanh-la",
@@ -15,7 +15,7 @@
     "benefit": "Nhận sticker sự kiện và voucher giảm 5% khi mua khăn độc quyền của sự kiện.",
     "type": "ticket",
     "image": "",
-    "baseQuantity": 80
+    "baseQuantity": 76
   },
   {
     "id": "y-mon",
@@ -24,7 +24,7 @@
     "benefit": "Nhận sticker sự kiện, voucher giảm 5% khi mua khăn của sự kiện và voucher giảm 10.000₫ trong hoạt động \"Tô màu rối gỗ\"",
     "type": "ticket",
     "image": "",
-    "baseQuantity": 74
+    "baseQuantity": 72
   },
   {
     "id": "tu-linh",
@@ -33,7 +33,7 @@
     "benefit": "Nhận voucher giảm 15% khi mua khăn độc quyền của sự kiện, tặng 01 combo merch và 01 mô hình rối gỗ trong hoạt động \"Tô màu rối gỗ\"",
     "type": "ticket",
     "image": "",
-    "baseQuantity": 70
+    "baseQuantity": 60
   },
   {
     "id": "combo-merch",
