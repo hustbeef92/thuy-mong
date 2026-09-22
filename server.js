@@ -561,7 +561,7 @@ async function getInventory() {
 
   const soldQuantities = {};
   orders.forEach(order => {
-    if (order.status === 'Đã thanh toán' || order.status === 'Chờ thanh toán' || !order.status) {
+    if (order.status === 'Đã thanh toán') {
       if (Array.isArray(order.items)) {
         order.items.forEach(cartItem => {
           soldQuantities[cartItem.id] = (soldQuantities[cartItem.id] || 0) + (Number(cartItem.quantity) || 0);
