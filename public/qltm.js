@@ -492,7 +492,7 @@ async function loadItems() {
         <td>
           ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />` : '<div style="width: 50px; height: 50px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #888;">No IMG</div>'}
         </td>
-        <td><strong>${item.name}</strong><br/><small style="color: #666;">Kho: ${item.quantity !== undefined && item.quantity !== null ? item.quantity : 'Vô hạn'}</small></td>
+        <td><strong>${item.name}</strong><br/><small style="color: #666;">Kho: ${item.baseQuantity !== undefined && item.baseQuantity !== null ? item.baseQuantity : 'Vô hạn'}</small></td>
         <td><code>${item.id}</code></td>
         <td>${item.type === 'ticket' ? 'Vé (Ticket)' : 'Ấn phẩm (Merch)'}</td>
         <td>${formatCurrency(item.price)}</td>
@@ -518,7 +518,7 @@ async function loadItems() {
           document.getElementById('itemType').value = item.type;
           document.getElementById('itemPrice').value = item.price;
           document.getElementById('itemBenefit').value = item.benefit || '';
-          document.getElementById('itemQuantity').value = item.quantity !== undefined && item.quantity !== null ? item.quantity : '';
+          document.getElementById('itemQuantity').value = item.baseQuantity !== undefined && item.baseQuantity !== null ? item.baseQuantity : '';
           
           itemModal.style.display = 'block';
           itemModalBackdrop.style.display = 'block';
@@ -566,7 +566,7 @@ itemForm.addEventListener('submit', async (e) => {
 
     const qtyStr = document.getElementById('itemQuantity').value.trim();
     if (qtyStr !== '') {
-      newItem.quantity = Number(qtyStr);
+      newItem.baseQuantity = Number(qtyStr);
     }
 
     // Convert image to Base64 if uploaded

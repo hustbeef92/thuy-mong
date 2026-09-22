@@ -41,7 +41,8 @@
     "price": 35000,
     "benefit": "Quạt, móc khoá, sticker độc quyền",
     "type": "merch",
-    "image": ""
+    "image": "",
+    "baseQuantity": 6
   },
   {
     "id": "khan",
@@ -49,6 +50,7 @@
     "price": 119000,
     "benefit": "Size 60x60cm. Có thể áp dụng ưu đãi giảm giá theo hạng vé",
     "type": "merch",
-    "image": ""
+    "image": "",
+    "baseQuantity": 2
   }
 ]
