@@ -1422,7 +1422,7 @@ app.get('/api/admin/items', async (req, res) => {
   res.json(updatedItems);
 });
 
-app.post('/api/admin/items', (req, res) => {
+app.post('/api/admin/items', async (req, res) => {
   const newItem = req.body;
   if (!newItem || !newItem.id || !newItem.name) {
     return res.status(400).json({ error: 'Thiếu thông tin bắt buộc (id, name).' });
@@ -1431,15 +1431,18 @@ app.post('/api/admin/items', (req, res) => {
   let items = readItems();
   const index = items.findIndex(i => i.id === newItem.id);
   
+  const soldQuantities = await getInventory();
+  const sold = soldQuantities[newItem.id] || 0;
+
   if (index !== -1) {
     if (newItem.quantity !== undefined) {
-      newItem.baseQuantity = newItem.quantity;
+      newItem.baseQuantity = Number(newItem.quantity) + sold;
       delete newItem.quantity;
     }
     items[index] = { ...items[index], ...newItem };
   } else {
     if (newItem.quantity !== undefined) {
-      newItem.baseQuantity = newItem.quantity;
+      newItem.baseQuantity = Number(newItem.quantity) + sold;
       delete newItem.quantity;
     }
     items.push(newItem);
