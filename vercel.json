@@ -5,14 +5,33 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["public/**", "data/**"]
+        "includeFiles": ["data/**"]
       }
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "/api/index.js"
+    },
+    {
+      "src": "/admin",
+      "dest": "/public/admin.html"
+    },
+    {
+      "src": "/contact",
+      "dest": "/public/contact.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)\\.(jpg|png|css|js|json|svg|ico)",
+      "dest": "/public/$1.$2"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
     }
   ]
 }

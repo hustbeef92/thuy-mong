@@ -439,6 +439,8 @@ scrollButtons.forEach((button) => {
 const checkoutForm = document.getElementById('checkout-form');
 const paymentProofInput = document.getElementById('payment-proof-input');
 
+const IMGBB_API_KEY = '736021b9deddbe506285ee70140a11bf';
+
 async function readPaymentProofAsDataUrl(file) {
   if (!file) return '';
 
@@ -447,7 +449,7 @@ async function readPaymentProofAsDataUrl(file) {
     reader.onload = () => {
       try {
         const image = new Image();
-        image.onload = () => {
+        image.onload = async () => {
           const canvas = document.createElement('canvas');
           const maxWidth = 1200;
           const maxHeight = 1200;
@@ -467,8 +469,31 @@ async function readPaymentProofAsDataUrl(file) {
           ctx.fillRect(0, 0, width, height);
           ctx.drawImage(image, 0, 0, width, height);
 
-          const compressed = canvas.toDataURL('image/jpeg', 0.72);
-          resolve(String(compressed || ''));
+          // Lấy blob (file nén) từ canvas thay vì base64 string
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              return reject(new Error('Lỗi nén ảnh.'));
+            }
+            try {
+              const formData = new FormData();
+              formData.append('image', blob, file.name || 'receipt.jpg');
+              
+              // Đẩy lên ImgBB
+              const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+              });
+              
+              const data = await res.json();
+              if (data && data.success) {
+                resolve(data.data.url); // Trả về URL của ảnh
+              } else {
+                reject(new Error(data?.error?.message || 'Lỗi tải ảnh lên ImgBB.'));
+              }
+            } catch (err) {
+              reject(new Error('Không thể kết nối đến máy chủ lưu trữ ảnh.'));
+            }
+          }, 'image/jpeg', 0.72);
         };
         image.onerror = () => reject(new Error('Không đọc được ảnh chuyển khoản.'));
         image.src = String(reader.result || '');
