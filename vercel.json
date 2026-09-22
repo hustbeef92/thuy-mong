@@ -5,26 +5,14 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["data/**"]
+        "includeFiles": ["public/**", "data/**"]
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/contact",
-      "destination": "/contact.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/api/index.js"
     }
   ]
 }
