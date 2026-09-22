@@ -9,29 +9,22 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "src": "/admin",
-      "dest": "/public/admin.html"
+      "source": "/admin",
+      "destination": "/admin.html"
     },
     {
-      "src": "/contact",
-      "dest": "/public/contact.html"
+      "source": "/contact",
+      "destination": "/contact.html"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)\\.(jpg|png|css|js|json|svg|ico)",
-      "dest": "/public/$1.$2"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
