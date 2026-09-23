@@ -638,13 +638,23 @@ app.post('/api/orders', async (req, res) => {
   }
 
   const normalizedCustomer = {
-    name: String(customer.name || '').trim(),
+    name: String(customer.name || '').trim().replace(/[<>]/g, ''),
     phone: String(customer.phone || '').trim(),
     email: String(customer.email || '').trim()
   };
 
   if (!normalizedCustomer.name || !normalizedCustomer.phone || !normalizedCustomer.email) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và email để nhận QR check-in.' });
+  }
+
+  const phoneRegex = /^[0-9+\s\-]{9,15}$/;
+  if (!phoneRegex.test(normalizedCustomer.phone) || normalizedCustomer.phone.replace(/\D/g, '').length < 9) {
+    return res.status(400).json({ message: 'Số điện thoại không hợp lệ. Vui lòng nhập từ 9-15 chữ số.' });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(normalizedCustomer.email)) {
+    return res.status(400).json({ message: 'Email không hợp lệ. Vui lòng kiểm tra lại.' });
   }
 
   const items = cart.items.map((item) => ({

@@ -18,21 +18,31 @@ const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0
 }).format(Number(value || 0));
 
+function escapeHtml(unsafe) {
+  if (unsafe == null) return '';
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function formatScanInfo(order = {}) {
   const customer = order.customer || {};
   const items = (Array.isArray(order.items) && order.items.length)
-    ? order.items.map((item) => `${item.name} x${item.quantity}`).join(', ')
-    : (order.itemsStr || '—');
+    ? order.items.map((item) => `${escapeHtml(item.name)} x${item.quantity}`).join(', ')
+    : escapeHtml(order.itemsStr || '—');
 
   return `
     <div class="scan-info-wrap">
-      <div><strong>Mã đơn:</strong> ${order.orderCode || '—'}</div>
-      <div><strong>Khách:</strong> ${customer.name || '—'}</div>
-      <div><strong>SĐT:</strong> ${customer.phone || '—'}</div>
-      <div><strong>Email:</strong> ${customer.email || '—'}</div>
-      <div><strong>Nơi nhận:</strong> ${order.deliveryLocation || 'Nhận tại sự kiện'}</div>
+      <div><strong>Mã đơn:</strong> ${escapeHtml(order.orderCode) || '—'}</div>
+      <div><strong>Khách:</strong> ${escapeHtml(customer.name) || '—'}</div>
+      <div><strong>SĐT:</strong> ${escapeHtml(customer.phone) || '—'}</div>
+      <div><strong>Email:</strong> ${escapeHtml(customer.email) || '—'}</div>
+      <div><strong>Nơi nhận:</strong> ${escapeHtml(order.deliveryLocation) || 'Nhận tại sự kiện'}</div>
       <div><strong>Vé:</strong> ${items}</div>
-      <div><strong>Trạng thái:</strong> ${order.ticketStatus || 'Chưa sử dụng'}</div>
+      <div><strong>Trạng thái:</strong> ${escapeHtml(order.ticketStatus) || 'Chưa sử dụng'}</div>
     </div>
   `;
 }
@@ -59,14 +69,14 @@ async function loadOrders() {
 
     ordersTableBody.innerHTML = (data.orders || [])
     .map((order) => {
-      const customerName = order.customer?.name || 'Khách hàng';
-      const phone = order.customer?.phone || '—';
-      const deliveryLocation = order.deliveryLocation || 'Nhận tại sự kiện';
-      const isNeu = deliveryLocation.toLowerCase().includes('neu');
+      const customerName = escapeHtml(order.customer?.name || 'Khách hàng');
+      const phone = escapeHtml(order.customer?.phone || '—');
+      const deliveryLocation = escapeHtml(order.deliveryLocation || 'Nhận tại sự kiện');
+      const isNeu = order.deliveryLocation && order.deliveryLocation.toLowerCase().includes('neu');
       const deliveryBadgeClass = isNeu ? 'neu' : 'event';
       const itemsText = (order.items && order.items.length) 
-        ? order.items.map((item) => `${item.name} x${item.quantity}`).join(', ')
-        : (order.itemsStr || '');
+        ? order.items.map((item) => `${escapeHtml(item.name)} x${item.quantity}`).join(', ')
+        : escapeHtml(order.itemsStr || '');
       const statusClass = order.status === 'Đã thanh toán' ? 'paid' : 'pending';
       const ticketClass = order.ticketStatus === 'Đã sử dụng' ? 'used' : 'pending';
       const confirmButton = order.status !== 'Đã thanh toán'
