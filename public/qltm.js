@@ -265,7 +265,7 @@ ordersTableBody.addEventListener('click', async (event) => {
     const orderCode = confirmBtn.dataset.orderCode;
     if (orderCode) {
       const pwd = prompt("Nhập mật khẩu xác nhận đơn:");
-      if (pwd === "notvu") {
+      if (pwd === "minhvu") {
         await confirmPendingPayment(orderCode);
       } else {
         alert("Mật khẩu xác nhận sai!");
