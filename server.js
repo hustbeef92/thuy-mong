@@ -735,7 +735,7 @@ app.post('/api/orders', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(order)
-    }, 5000);
+    }, 10000);
   } catch (err) {
     console.error('Lỗi gửi dữ liệu về Sheet:', err.message);
   }
@@ -1008,7 +1008,7 @@ app.get('/api/admin/orders', async (req, res) => {
   // Thử lấy từ Google Sheet (qua doGet)
   const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
   try {
-    const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 8000);
+    const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 15000);
     if (sheetRes.ok) {
       const sheetData = await sheetRes.json();
       if (Array.isArray(sheetData) && sheetData.length > 0) {
@@ -1067,15 +1067,19 @@ app.get('/api/admin/orders', async (req, res) => {
         const localCodes = new Set(allOrders.map(o => o.orderCode));
         sheetData.forEach(o => {
           if (o.orderCode && String(o.orderCode).trim() !== '' && !localCodes.has(o.orderCode)) {
+            let cust = o.customer || {};
+            if (typeof cust === 'string') {
+              try { cust = JSON.parse(cust); } catch (_) { cust = { name: cust }; }
+            }
             allOrders.push({
               id: o.orderCode,
               orderCode: o.orderCode,
-              customer: o.customer || {},
+              customer: cust,
               deliveryLocation: o.deliveryLocation || '',
               status: o.status || 'Chờ thanh toán',
               total: o.total || 0,
               createdAt: o.createdAt || new Date().toISOString(),
-              items: [], // Chỉ để hiển thị admin
+              items: Array.isArray(o.items) ? o.items : [],
               itemsStr: o.itemsStr || ''
             });
           }
@@ -1094,7 +1098,7 @@ app.get('/api/admin/orders', async (req, res) => {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(orderPayload)
-                }, 5000);
+                }, 10000);
                 await new Promise(r => setTimeout(r, 400));
               } catch (e) {
                 console.warn(`Lỗi auto-sync đơn ${order.orderCode}:`, e.message);
