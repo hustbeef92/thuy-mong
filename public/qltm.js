@@ -317,7 +317,38 @@ if (refreshOrdersBtn) {
   refreshOrdersBtn.addEventListener('click', async () => {
     try {
       refreshOrdersBtn.disabled = true;
-      refreshOrdersBtn.textContent = 'Đang làm mới...';
+      refreshOrdersBtn.textContent = '⏳ Đang tải từ Sheet...';
+      
+      // Bước 1: Tải / đồng bộ đơn hàng từ Google Sheet
+      try {
+        const restoreRes = await fetch('/api/admin/restore-from-sheet', { method: 'POST' });
+        const restoreData = await restoreRes.json();
+        if (restoreRes.ok && restoreData.success) {
+          // Hiển thị kết quả sync ngắn gọn
+          if (scanResultEl) {
+            scanResultEl.className = 'scan-result success';
+            scanResultEl.textContent = restoreData.message || 'Đã tải đơn hàng từ Sheet.';
+            setTimeout(() => {
+              scanResultEl.className = 'scan-result neutral';
+              scanResultEl.textContent = '';
+            }, 5000);
+          }
+        } else {
+          console.warn('Restore from sheet warning:', restoreData.message);
+          if (scanResultEl) {
+            scanResultEl.className = 'scan-result error';
+            scanResultEl.textContent = restoreData.message || 'Không thể tải từ Sheet.';
+            setTimeout(() => {
+              scanResultEl.className = 'scan-result neutral';
+              scanResultEl.textContent = '';
+            }, 5000);
+          }
+        }
+      } catch (sheetErr) {
+        console.warn('Không thể đồng bộ từ Sheet:', sheetErr.message);
+      }
+      
+      // Bước 2: Tải lại danh sách đơn hàng
       await loadOrders();
     } catch (err) {
       alert('Lỗi: ' + (err.message || 'Lỗi khi tải lại dữ liệu'));

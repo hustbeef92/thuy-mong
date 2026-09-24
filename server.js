@@ -1240,42 +1240,89 @@ app.post('/api/admin/restore-from-sheet', async (req, res) => {
   try {
     const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
     const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 15000);
-    if (!sheetRes.ok) throw new Error('Cannot fetch from sheet');
+    if (!sheetRes.ok) throw new Error('Không thể kết nối tới Google Sheet');
     const sheetData = await sheetRes.json();
     
+    if (!Array.isArray(sheetData) || sheetData.length === 0) {
+      return res.status(200).json({ success: true, message: 'Sheet không có dữ liệu đơn hàng.', restoredCount: 0, updatedCount: 0 });
+    }
+
     let localOrders = await readOrdersPersistent(5000);
-    const localCodes = new Set(localOrders.map(o => o.orderCode));
+    const localMap = new Map(localOrders.map(o => [o.orderCode, o]));
     
     let restoredCount = 0;
+    let updatedCount = 0;
+
     for (const o of sheetData) {
-      if (o.orderCode && String(o.orderCode).trim() !== '' && !localCodes.has(o.orderCode)) {
-        let cust = o.customer || {};
-        if (typeof cust === 'string') {
-          try { cust = JSON.parse(cust); } catch (_) { cust = { name: cust }; }
+      if (!o.orderCode || String(o.orderCode).trim() === '') continue;
+
+      let cust = o.customer || {};
+      if (typeof cust === 'string') {
+        try { cust = JSON.parse(cust); } catch (_) { cust = { name: cust }; }
+      }
+
+      let items = [];
+      if (Array.isArray(o.items)) {
+        items = o.items;
+      } else if (typeof o.items === 'string') {
+        try { items = JSON.parse(o.items); } catch (_) { items = []; }
+      }
+
+      const sheetOrder = {
+        id: o.id || o.orderCode,
+        orderCode: o.orderCode,
+        customer: cust,
+        deliveryLocation: o.deliveryLocation || 'Nhận tại sự kiện',
+        paymentMethod: o.paymentMethod || 'COD',
+        status: o.status || 'Chờ thanh toán',
+        ticketStatus: o.ticketStatus || 'Chưa sử dụng',
+        total: Number(o.total) || 0,
+        createdAt: o.createdAt || new Date().toISOString(),
+        items: items,
+        itemsStr: o.itemsStr || '',
+        emailSent: o.emailSent === true || String(o.emailSent || '').toLowerCase() === 'true',
+        proofImage: o.proofImage || null,
+        proofUploadedAt: o.proofUploadedAt || null,
+        paidAt: o.paidAt || null,
+        checkedInAt: o.checkedInAt || null,
+        qrCodeUrl: o.qrCodeUrl || null
+      };
+
+      if (localMap.has(o.orderCode)) {
+        // Cập nhật đơn hàng đã có — gộp dữ liệu từ Sheet vào local
+        const existing = localMap.get(o.orderCode);
+        const merged = { ...existing };
+        // Cập nhật trạng thái từ Sheet nếu có
+        if (o.status) merged.status = o.status;
+        if (o.ticketStatus) merged.ticketStatus = o.ticketStatus;
+        if (o.emailSent !== undefined) merged.emailSent = sheetOrder.emailSent;
+        if (o.paidAt) merged.paidAt = o.paidAt;
+        if (o.checkedInAt) merged.checkedInAt = o.checkedInAt;
+        if (o.proofImage) merged.proofImage = o.proofImage;
+        if (o.deliveryLocation) merged.deliveryLocation = o.deliveryLocation;
+        // Customer info from sheet
+        if (cust && (cust.name || cust.phone || cust.email)) {
+          merged.customer = { ...merged.customer, ...cust };
         }
-        
-        const restoredOrder = {
-          id: o.orderCode,
-          orderCode: o.orderCode,
-          customer: cust,
-          deliveryLocation: o.deliveryLocation || 'Nhận tại sự kiện',
-          status: o.status || 'Chờ thanh toán',
-          total: o.total || 0,
-          createdAt: o.createdAt || new Date().toISOString(),
-          items: Array.isArray(o.items) ? o.items : [],
-          itemsStr: o.itemsStr || '',
-          emailSent: o.emailSent === true || String(o.emailSent).toLowerCase() === 'true'
-        };
-        
-        await saveOrderPersistent(restoredOrder);
+        await saveOrderPersistent(merged);
+        updatedCount++;
+      } else {
+        // Thêm đơn hàng mới từ Sheet
+        await saveOrderPersistent(sheetOrder);
         restoredCount++;
       }
     }
     
     inventoryCacheTime = 0;
-    return res.status(200).json({ success: true, message: `Đã khôi phục thành công ${restoredCount} đơn hàng từ Sheet.`, restoredCount });
+    return res.status(200).json({ 
+      success: true, 
+      message: `Đã tải ${sheetData.length} đơn từ Sheet: ${restoredCount} đơn mới, ${updatedCount} đơn cập nhật.`, 
+      restoredCount, 
+      updatedCount,
+      totalFromSheet: sheetData.length
+    });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Lỗi khôi phục: ' + err.message });
+    return res.status(500).json({ success: false, message: 'Lỗi tải từ Sheet: ' + err.message });
   }
 });
 
