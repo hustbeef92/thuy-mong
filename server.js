@@ -630,24 +630,7 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-const ipRateLimit = new Map();
-
 app.post('/api/orders', async (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || 'unknown';
-  const now = Date.now();
-  if (ip !== 'unknown') {
-    const record = ipRateLimit.get(ip) || { count: 0, firstSeen: now };
-    if (now - record.firstSeen > 15 * 60 * 1000) {
-      record.count = 1;
-      record.firstSeen = now;
-    } else {
-      record.count += 1;
-    }
-    ipRateLimit.set(ip, record);
-    if (record.count > 3) {
-      return res.status(429).json({ message: 'Thao tác quá nhanh. Vui lòng thử lại sau 15 phút.' });
-    }
-  }
 
   const { customer, cart, paymentMethod, captcha } = req.body || {};
 
@@ -687,10 +670,6 @@ app.post('/api/orders', async (req, res) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(normalizedCustomer.email)) {
     return res.status(400).json({ message: 'Email không hợp lệ. Vui lòng kiểm tra lại.' });
-  }
-  
-  if (normalizedCustomer.email.toLowerCase().endsWith('@example.com') || normalizedCustomer.name.toLowerCase().includes('test order')) {
-    return res.status(400).json({ message: 'Lỗi xác thực hệ thống.' });
   }
 
   const items = cart.items.map((item) => ({
