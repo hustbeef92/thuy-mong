@@ -4,6 +4,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const dns = require('dns').promises;
 let nodemailer = null;
 try {
   nodemailer = require('nodemailer');
@@ -659,6 +660,21 @@ app.post('/api/orders', async (req, res) => {
 
   if (!normalizedCustomer.name || !normalizedCustomer.phone || !normalizedCustomer.email) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và email để nhận QR check-in.' });
+  }
+
+  // Kiểm tra tên miền email (MX Record) để đảm bảo email có thật
+  const emailParts = normalizedCustomer.email.split('@');
+  if (emailParts.length !== 2) {
+    return res.status(400).json({ message: 'Địa chỉ email không đúng định dạng.' });
+  }
+  const domain = emailParts[1];
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    if (!mxRecords || mxRecords.length === 0) {
+      return res.status(400).json({ message: 'Tên miền email này không có máy chủ nhận thư (không tồn tại). Vui lòng dùng email thật!' });
+    }
+  } catch (error) {
+    return res.status(400).json({ message: 'Tên miền email không tồn tại hoặc không hợp lệ. Vui lòng kiểm tra lại email.' });
   }
 
   // 1. Validate Name (Tối thiểu 2 ký tự)
