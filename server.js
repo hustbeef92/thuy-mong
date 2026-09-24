@@ -1239,22 +1239,13 @@ app.post('/api/admin/clear-orders', async (req, res) => {
 
 app.post('/api/admin/cleanup-orders', async (req, res) => {
   try {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
     let orders = readOrders();
     const toDeleteCodes = [];
     
     orders = orders.filter(o => {
-      const createdTime = new Date(o.createdAt || Date.now()).getTime();
-      const isOld = createdTime < oneHourAgo;
-      const hasNoImage = !o.proofImage;
       const isUnpaid = o.status !== 'Đã thanh toán';
       
-      const lowerName = String(o.customer?.name || '').toLowerCase();
-      const lowerEmail = String(o.customer?.email || '').toLowerCase();
-      const cleanPhone = String(o.customer?.phone || '').replace(/\D/g, '');
-      const isBot = lowerName.includes('qa bot') || lowerName.includes('test') || lowerEmail.includes('qa_bot') || cleanPhone === '0987654321' || lowerName.includes('bot');
-
-      if ((isOld && hasNoImage && isUnpaid) || isBot) {
+      if (isUnpaid) {
         toDeleteCodes.push(o.orderCode);
         return false;
       }

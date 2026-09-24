@@ -626,10 +626,10 @@ loadOrders();
 const cleanupOrdersBtn = document.getElementById('cleanupOrdersBtn');
 if (cleanupOrdersBtn) {
   cleanupOrdersBtn.addEventListener('click', async () => {
-    if (!confirm('Bạn có chắc chắn muốn dọn dẹp các đơn rác (chưa thanh toán, không có ảnh và tạo quá 1 tiếng) không? Các đơn này sẽ bị XÓA VĨNH VIỄN.')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa TOÀN BỘ các đơn chưa thanh toán (chưa được xác nhận) không? Các đơn này sẽ bị XÓA VĨNH VIỄN.')) return;
     
     cleanupOrdersBtn.disabled = true;
-    cleanupOrdersBtn.textContent = 'Đang dọn dẹp...';
+    cleanupOrdersBtn.textContent = 'Đang xóa...';
     try {
       const res = await fetch('/api/admin/cleanup-orders', { method: 'POST' });
       if (!res.ok) throw new Error('Network response was not ok');
@@ -637,10 +637,10 @@ if (cleanupOrdersBtn) {
       alert(data.message);
       loadOrders();
     } catch (err) {
-      alert('Lỗi dọn dẹp: ' + err.message);
+      alert('Lỗi khi xóa: ' + err.message);
     } finally {
       cleanupOrdersBtn.disabled = false;
-      cleanupOrdersBtn.textContent = '🧹 Dọn dẹp đơn rác';
+      cleanupOrdersBtn.textContent = '🗑️ Xóa tất cả đơn chưa xác nhận';
     }
   });
 }
