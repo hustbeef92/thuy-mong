@@ -656,20 +656,28 @@ app.post('/api/orders', async (req, res) => {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và email để nhận QR check-in.' });
   }
 
-  // Validate Name (no special characters or numbers)
+  // 1. Validate Name (Tối thiểu 2 ký tự)
+  if (normalizedCustomer.name.length < 2) {
+    return res.status(400).json({ message: 'Vui lòng nhập họ tên đầy đủ (tối thiểu 2 ký tự).' });
+  }
   const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
   if (!nameRegex.test(normalizedCustomer.name)) {
     return res.status(400).json({ message: 'Tên chỉ được chứa chữ cái và khoảng trắng, không chứa số hay ký tự đặc biệt.' });
   }
 
-  const phoneRegex = /^[0-9+\s\-]{9,15}$/;
-  if (!phoneRegex.test(normalizedCustomer.phone) || normalizedCustomer.phone.replace(/\D/g, '').length < 9) {
-    return res.status(400).json({ message: 'Số điện thoại không hợp lệ. Vui lòng nhập từ 9-15 chữ số.' });
+  // 2. Validate Phone (Chuẩn SĐT Việt Nam: 03/05/07/08/09 + 8 chữ số, không dùng SĐT ảo rác)
+  const cleanPhone = normalizedCustomer.phone.replace(/\D/g, '');
+  const vnPhoneRegex = /^(0|84)(3|5|7|8|9)[0-9]{8}$/;
+  const isRepeatedPhone = /^(\d)\1+$/.test(cleanPhone) || cleanPhone === '0123456789' || cleanPhone === '123456789';
+  if (!vnPhoneRegex.test(cleanPhone) || isRepeatedPhone) {
+    return res.status(400).json({ message: 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam thực tế (ví dụ: 0912345678).' });
   }
 
+  // 3. Validate Email (Độ dài tên trước @ tối thiểu 3 ký tự)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(normalizedCustomer.email)) {
-    return res.status(400).json({ message: 'Email không hợp lệ. Vui lòng kiểm tra lại.' });
+  const emailLocalPart = (normalizedCustomer.email.split('@')[0] || '').trim();
+  if (!emailRegex.test(normalizedCustomer.email) || emailLocalPart.length < 3) {
+    return res.status(400).json({ message: 'Email không hợp lệ. Vui lòng nhập email chính xác để nhận QR check-in.' });
   }
 
   // Anti-spam filters (Safe mode)
