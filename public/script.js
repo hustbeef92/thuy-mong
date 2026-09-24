@@ -424,6 +424,7 @@ async function loadData() {
     renderMerch();
     renderCart();
   }
+  generateCaptcha();
 }
 
 const scrollButtons = document.querySelectorAll('[data-scroll]');
@@ -435,6 +436,21 @@ scrollButtons.forEach((button) => {
     }
   });
 });
+
+function generateCaptcha() {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  const label = document.getElementById('captcha-label');
+  const inputA = document.getElementById('captcha-a');
+  const inputB = document.getElementById('captcha-b');
+  const inputAnswer = document.getElementById('captcha-input');
+  if (label && inputA && inputB && inputAnswer) {
+    label.innerText = `Mã bảo vệ: ${a} + ${b} = ?`;
+    inputA.value = a;
+    inputB.value = b;
+    inputAnswer.value = '';
+  }
+}
 
 const checkoutForm = document.getElementById('checkout-form');
 const paymentProofInput = document.getElementById('payment-proof-input');
@@ -532,6 +548,11 @@ checkoutForm.addEventListener('submit', async (event) => {
       phone: formData.get('phone'),
       email: formData.get('email') || ''
     },
+    captcha: {
+      a: Number(document.getElementById('captcha-a').value),
+      b: Number(document.getElementById('captcha-b').value),
+      answer: Number(formData.get('captcha'))
+    },
     deliveryLocation: formData.get('deliveryLocation') || 'Nhận tại sự kiện',
     paymentMethod: 'BANK',
     proofImage,
@@ -562,6 +583,7 @@ checkoutForm.addEventListener('submit', async (event) => {
     const result = await response.json();
 
     if (!response.ok) {
+      generateCaptcha();
       throw new Error(result.message || 'Xử lý đặt vé thất bại');
     }
 

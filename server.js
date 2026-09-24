@@ -631,20 +631,34 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-  const { customer, cart, paymentMethod } = req.body || {};
+  const { customer, cart, paymentMethod, captcha } = req.body || {};
 
   if (!customer || !cart || !Array.isArray(cart.items) || !customer.name || !customer.phone) {
     return res.status(400).json({ message: 'Thiếu thông tin khách hàng hoặc giỏ hàng.' });
   }
 
+  // Validate CAPTCHA
+  if (!captcha || typeof captcha.a !== 'number' || typeof captcha.b !== 'number' || typeof captcha.answer !== 'number') {
+    return res.status(400).json({ message: 'Vui lòng xác thực mã bảo vệ.' });
+  }
+  if (captcha.a + captcha.b !== captcha.answer) {
+    return res.status(400).json({ message: 'Mã bảo vệ không chính xác.' });
+  }
+
   const normalizedCustomer = {
-    name: String(customer.name || '').trim().replace(/[<>]/g, ''),
+    name: String(customer.name || '').trim(),
     phone: String(customer.phone || '').trim(),
     email: String(customer.email || '').trim()
   };
 
   if (!normalizedCustomer.name || !normalizedCustomer.phone || !normalizedCustomer.email) {
     return res.status(400).json({ message: 'Vui lòng nhập đầy đủ họ tên, số điện thoại và email để nhận QR check-in.' });
+  }
+
+  // Validate Name (no special characters or numbers)
+  const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+  if (!nameRegex.test(normalizedCustomer.name)) {
+    return res.status(400).json({ message: 'Tên chỉ được chứa chữ cái và khoảng trắng, không chứa số hay ký tự đặc biệt.' });
   }
 
   const phoneRegex = /^[0-9+\s\-]{9,15}$/;
