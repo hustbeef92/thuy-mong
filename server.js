@@ -633,7 +633,7 @@ app.get('/api/health', async (req, res) => {
 const ipRateLimit = new Map();
 
 app.post('/api/orders', async (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  const ip = req.headers['x-forwarded-for'] || (req.socket && req.socket.remoteAddress) || 'unknown';
   const now = Date.now();
   if (ip !== 'unknown') {
     const record = ipRateLimit.get(ip) || { count: 0, firstSeen: now };
