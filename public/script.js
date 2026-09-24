@@ -438,17 +438,48 @@ scrollButtons.forEach((button) => {
 });
 
 function generateCaptcha() {
-  const a = Math.floor(Math.random() * 10) + 1;
-  const b = Math.floor(Math.random() * 10) + 1;
-  const label = document.getElementById('captcha-label');
-  const inputA = document.getElementById('captcha-a');
-  const inputB = document.getElementById('captcha-b');
+  const canvas = document.getElementById('captcha-canvas');
+  const ctx = canvas ? canvas.getContext('2d') : null;
+  const inputToken = document.getElementById('captcha-token');
   const inputAnswer = document.getElementById('captcha-input');
-  if (label && inputA && inputB && inputAnswer) {
-    label.innerText = `Mã bảo vệ: ${a} + ${b} = ?`;
-    inputA.value = a;
-    inputB.value = b;
+  
+  if (ctx && inputToken && inputAnswer) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let cap = '';
+    for(let i = 0; i < 5; i++) {
+      cap += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    for(let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.strokeStyle = `rgba(241,198,107, ${Math.random() * 0.5 + 0.2})`;
+      ctx.stroke();
+    }
+    
+    ctx.font = 'bold 22px Inter, sans-serif';
+    ctx.fillStyle = '#f1c66b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    for(let i = 0; i < cap.length; i++) {
+      ctx.save();
+      ctx.translate(22 + i * 19, canvas.height / 2);
+      ctx.rotate((Math.random() - 0.5) * 0.4);
+      ctx.fillText(cap[i], 0, 0);
+      ctx.restore();
+    }
+    
+    inputToken.value = btoa(cap + '_tm2026');
     inputAnswer.value = '';
+    
+    if (!canvas.dataset.clickable) {
+      canvas.addEventListener('click', generateCaptcha);
+      canvas.dataset.clickable = 'true';
+    }
   }
 }
 
@@ -542,7 +573,7 @@ checkoutForm.addEventListener('submit', async (event) => {
   }
 
   const cleanPhone = customerPhone.replace(/\D/g, '');
-  const vnPhoneRegex = /^(0|84)(3|5|7|8|9)[0-9]{8}$/;
+  const vnPhoneRegex = /^0(3|5|7|8|9)[0-9]{8}$/;
   const isRepeatedPhone = /^(\d)\1+$/.test(cleanPhone) || cleanPhone === '0123456789' || cleanPhone === '123456789';
   if (!vnPhoneRegex.test(cleanPhone) || isRepeatedPhone) {
     showToast('Số điện thoại không hợp lệ. Vui lòng nhập SĐT Việt Nam (ví dụ: 0912345678).');
@@ -574,9 +605,8 @@ checkoutForm.addEventListener('submit', async (event) => {
       website: formData.get('website') || ''
     },
     captcha: {
-      a: Number(document.getElementById('captcha-a').value),
-      b: Number(document.getElementById('captcha-b').value),
-      answer: Number(formData.get('captcha'))
+      token: document.getElementById('captcha-token').value,
+      answer: String(formData.get('captcha')).trim().toUpperCase()
     },
     deliveryLocation: formData.get('deliveryLocation') || 'Nhận tại sự kiện',
     paymentMethod: 'BANK',

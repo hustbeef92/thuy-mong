@@ -206,11 +206,13 @@
                     <option value="Nhận ở NEU">Nhận ở NEU (Đại học Kinh tế Quốc dân)</option>
                   </select>
                 </div>
-                <div class="field-group">
+                <div class="field-group captcha-group" style="display: flex; flex-direction: column; gap: 8px;">
                   <label id="captcha-label">Mã bảo vệ: </label>
-                  <input type="number" name="captcha" id="captcha-input" placeholder="Nhập kết quả phép tính" required />
-                  <input type="hidden" id="captcha-a" />
-                  <input type="hidden" id="captcha-b" />
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <canvas id="captcha-canvas" width="120" height="40" style="border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: #0b2024; cursor: pointer;" title="Bấm để đổi mã mới"></canvas>
+                    <input type="text" name="captcha" id="captcha-input" placeholder="Nhập mã bảo vệ" required style="flex: 1; text-transform: uppercase;" />
+                  </div>
+                  <input type="hidden" id="captcha-token" name="captchaToken" />
                 </div>
                 <button type="submit" class="btn btn-primary full-width">Thanh toán bằng QR</button>
               </form>
@@ -254,6 +256,6 @@
 
     <div id="toast" class="toast" aria-live="polite"></div>
 
-    <script src="/assets/script.js?v=5"></script>
+    <script src="/assets/script.js?v=6"></script>
   </body>
 </html>

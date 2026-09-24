@@ -639,11 +639,16 @@ app.post('/api/orders', async (req, res) => {
   }
 
   // Validate CAPTCHA
-  if (!captcha || typeof captcha.a !== 'number' || typeof captcha.b !== 'number' || typeof captcha.answer !== 'number') {
+  if (!captcha || !captcha.token || !captcha.answer) {
     return res.status(400).json({ message: 'Vui lòng xác thực mã bảo vệ.' });
   }
-  if (captcha.a + captcha.b !== captcha.answer) {
-    return res.status(400).json({ message: 'Mã bảo vệ không chính xác.' });
+  try {
+    const expected = Buffer.from(captcha.token, 'base64').toString('utf-8').replace('_tm2026', '');
+    if (captcha.answer !== expected) {
+      return res.status(400).json({ message: 'Mã bảo vệ không chính xác.' });
+    }
+  } catch (e) {
+    return res.status(400).json({ message: 'Mã bảo vệ không hợp lệ.' });
   }
 
   const normalizedCustomer = {
@@ -667,7 +672,7 @@ app.post('/api/orders', async (req, res) => {
 
   // 2. Validate Phone (Chuẩn SĐT Việt Nam: 03/05/07/08/09 + 8 chữ số, không dùng SĐT ảo rác)
   const cleanPhone = normalizedCustomer.phone.replace(/\D/g, '');
-  const vnPhoneRegex = /^(0|84)(3|5|7|8|9)[0-9]{8}$/;
+  const vnPhoneRegex = /^0(3|5|7|8|9)[0-9]{8}$/;
   const isRepeatedPhone = /^(\d)\1+$/.test(cleanPhone) || cleanPhone === '0123456789' || cleanPhone === '123456789';
   if (!vnPhoneRegex.test(cleanPhone) || isRepeatedPhone) {
     return res.status(400).json({ message: 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam thực tế (ví dụ: 0912345678).' });
