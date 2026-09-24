@@ -765,6 +765,8 @@ app.post('/api/orders', async (req, res) => {
   const proofImage = String(req.body?.proofImage || '').trim();
   const deliveryLocation = String(req.body?.deliveryLocation || 'Nhận tại sự kiện').trim();
 
+  const itemsStr = items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+
   const order = {
     id: `TM-${Date.now()}`,
     orderCode,
@@ -776,6 +778,7 @@ app.post('/api/orders', async (req, res) => {
     deliveryLocation: deliveryLocation || 'Nhận tại sự kiện',
     paymentMethod: normalizedPaymentMethod,
     items,
+    itemsStr,
     total,
     status: 'Chờ thanh toán',
     ticketStatus: 'Chưa sử dụng',
