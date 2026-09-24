@@ -1236,6 +1236,49 @@ app.post('/api/admin/cleanup-orders', async (req, res) => {
   }
 });
 
+app.post('/api/admin/restore-from-sheet', async (req, res) => {
+  try {
+    const sheetWebhookUrl = process.env.GOOGLE_SHEET_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbxXPPdHXDNbRcmQPYsSoqn3MlzIOIDkvdXrTJvFrXk2ZchFkMBQb1fmLJaQzthe9Y1yzg/exec';
+    const sheetRes = await fetchWithTimeout(sheetWebhookUrl, { method: 'GET' }, 15000);
+    if (!sheetRes.ok) throw new Error('Cannot fetch from sheet');
+    const sheetData = await sheetRes.json();
+    
+    let localOrders = await readOrdersPersistent(5000);
+    const localCodes = new Set(localOrders.map(o => o.orderCode));
+    
+    let restoredCount = 0;
+    for (const o of sheetData) {
+      if (o.orderCode && String(o.orderCode).trim() !== '' && !localCodes.has(o.orderCode)) {
+        let cust = o.customer || {};
+        if (typeof cust === 'string') {
+          try { cust = JSON.parse(cust); } catch (_) { cust = { name: cust }; }
+        }
+        
+        const restoredOrder = {
+          id: o.orderCode,
+          orderCode: o.orderCode,
+          customer: cust,
+          deliveryLocation: o.deliveryLocation || 'Nhận tại sự kiện',
+          status: o.status || 'Chờ thanh toán',
+          total: o.total || 0,
+          createdAt: o.createdAt || new Date().toISOString(),
+          items: Array.isArray(o.items) ? o.items : [],
+          itemsStr: o.itemsStr || '',
+          emailSent: o.emailSent === true || String(o.emailSent).toLowerCase() === 'true'
+        };
+        
+        await saveOrderPersistent(restoredOrder);
+        restoredCount++;
+      }
+    }
+    
+    inventoryCacheTime = 0;
+    return res.status(200).json({ success: true, message: `Đã khôi phục thành công ${restoredCount} đơn hàng từ Sheet.`, restoredCount });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Lỗi khôi phục: ' + err.message });
+  }
+});
+
 app.delete('/api/admin/orders/:orderCode', async (req, res) => {
   const code = String(req.params.orderCode || '').trim();
   if (!code) {
