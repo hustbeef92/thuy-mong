@@ -531,6 +531,30 @@ checkoutForm.addEventListener('submit', async (event) => {
   }
 
   const formData = new FormData(checkoutForm);
+
+  const customerName = String(formData.get('name') || '').trim();
+  const customerPhone = String(formData.get('phone') || '').trim();
+  const customerEmail = String(formData.get('email') || '').trim();
+
+  if (customerName.length < 2) {
+    showToast('Vui lòng nhập họ tên đầy đủ (tối thiểu 2 ký tự).');
+    return;
+  }
+
+  const cleanPhone = customerPhone.replace(/\D/g, '');
+  const vnPhoneRegex = /^(0|84)(3|5|7|8|9)[0-9]{8}$/;
+  const isRepeatedPhone = /^(\d)\1+$/.test(cleanPhone) || cleanPhone === '0123456789' || cleanPhone === '123456789';
+  if (!vnPhoneRegex.test(cleanPhone) || isRepeatedPhone) {
+    showToast('Số điện thoại không hợp lệ. Vui lòng nhập SĐT Việt Nam (ví dụ: 0912345678).');
+    return;
+  }
+
+  const emailLocalPart = (customerEmail.split('@')[0] || '').trim();
+  if (emailLocalPart.length < 3) {
+    showToast('Email không hợp lệ. Vui lòng kiểm tra lại email.');
+    return;
+  }
+
   let proofImage = '';
 
   try {
