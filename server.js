@@ -705,7 +705,17 @@ app.post('/api/orders', async (req, res) => {
   if (customer.website || (typeof customer.website === 'string' && customer.website.trim() !== '')) {
     return res.status(400).json({ message: 'Lỗi xác thực hệ thống.' });
   }
-  if (normalizedCustomer.email.indexOf('@example.com') !== -1 || normalizedCustomer.name.indexOf('Test Order') !== -1) {
+  
+  const lowerName = normalizedCustomer.name.toLowerCase();
+  const lowerEmail = normalizedCustomer.email.toLowerCase();
+  if (
+    lowerEmail.includes('@example.com') ||
+    lowerName.includes('test order') ||
+    lowerName.includes('qa bot') ||
+    lowerName.includes('test') ||
+    lowerEmail.includes('qa_bot') ||
+    cleanPhone === '0987654321'
+  ) {
     return res.status(400).json({ message: 'Lỗi xác thực hệ thống.' });
   }
 
