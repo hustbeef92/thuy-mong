@@ -1133,49 +1133,8 @@ app.get('/api/admin/orders', async (req, res) => {
           return o;
         }));
 
-        // Thêm các đơn chỉ có trong Sheet
-        const localCodes = new Set(allOrders.map(o => o.orderCode));
-        sheetData.forEach(o => {
-          if (o.orderCode && String(o.orderCode).trim() !== '' && !localCodes.has(o.orderCode)) {
-            let cust = o.customer || {};
-            if (typeof cust === 'string') {
-              try { cust = JSON.parse(cust); } catch (_) { cust = { name: cust }; }
-            }
-            allOrders.push({
-              id: o.orderCode,
-              orderCode: o.orderCode,
-              customer: cust,
-              deliveryLocation: o.deliveryLocation || '',
-              status: o.status || 'Chờ thanh toán',
-              total: o.total || 0,
-              createdAt: o.createdAt || new Date().toISOString(),
-              items: Array.isArray(o.items) ? o.items : [],
-              itemsStr: o.itemsStr || ''
-            });
-          }
-        });
-        
-        // Tự động đồng bộ các đơn có trong web nhưng chưa có trong Sheet
-        const missingOrders = allOrders.filter(o => o.orderCode && !sheetOrderMap.has(o.orderCode));
-        if (missingOrders.length > 0) {
-          console.log(`Đang tự động đồng bộ ${missingOrders.length} đơn sang Sheet...`);
-          // Chạy ngầm
-          (async () => {
-            for (const order of missingOrders) {
-              try {
-                const orderPayload = { ...order, sendEmail: order.emailSent ? false : order.sendEmail || false };
-                await fetchWithTimeout(sheetWebhookUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(orderPayload)
-                }, 10000);
-                await new Promise(r => setTimeout(r, 400));
-              } catch (e) {
-                console.warn(`Lỗi auto-sync đơn ${order.orderCode}:`, e.message);
-              }
-            }
-          })();
-        }
+        // Đã tắt tính năng tự động khôi phục các đơn hàng bị thiếu giữa Sheet và Admin
+        // để tránh tình trạng đơn hàng bị xóa ở một nơi lại nhảy ngược lại từ nơi kia.
       }
     }
   } catch (err) {
