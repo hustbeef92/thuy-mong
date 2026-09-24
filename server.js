@@ -1198,7 +1198,7 @@ app.post('/api/admin/clear-orders', async (req, res) => {
 
 app.post('/api/admin/cleanup-orders', async (req, res) => {
   try {
-    let orders = readOrders();
+    let orders = await readOrdersPersistent(5000);
     const toDeleteCodes = [];
     
     orders = orders.filter(o => {
