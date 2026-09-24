@@ -630,6 +630,37 @@ app.get('/api/health', async (req, res) => {
     return res.status(503).json({ ok: false, supabase: 'error', durationMs: Date.now() - startedAt, error: error.message });
   }
 });
+app.get('/api/captcha', (req, res) => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let cap = '';
+  for (let i = 0; i < 5; i++) {
+    cap += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  const crypto = require('crypto');
+  const secret = process.env.SUPABASE_ANON_KEY || 'thuy_mong_secret_2026';
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(cap);
+  const hash = hmac.digest('hex');
+  
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="50">
+    <rect width="100%" height="100%" fill="#2c2c2c"/>`;
+    
+  for(let i = 0; i < 5; i++) {
+    const x = 20 + i * 24 + Math.random() * 5;
+    const y = 32 + Math.random() * 5;
+    const rot = (Math.random() - 0.5) * 40;
+    svg += `<text x="${x}" y="${y}" transform="rotate(${rot} ${x} ${y})" fill="#f1c66b" font-size="26" font-family="sans-serif" font-weight="bold">${cap[i]}</text>`;
+  }
+  
+  for(let i=0; i<10; i++) {
+    svg += `<line x1="${Math.random()*160}" y1="${Math.random()*50}" x2="${Math.random()*160}" y2="${Math.random()*50}" stroke="#f1c66b" stroke-width="2" opacity="0.6"/>`;
+  }
+  
+  svg += `</svg>`;
+  
+  res.json({ token: hash, image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` });
+});
 
 app.post('/api/orders', async (req, res) => {
 
@@ -643,13 +674,13 @@ app.post('/api/orders', async (req, res) => {
   if (!captcha || !captcha.token || !captcha.answer) {
     return res.status(400).json({ message: 'Vui lòng xác thực mã bảo vệ.' });
   }
-  try {
-    const expected = Buffer.from(captcha.token, 'base64').toString('utf-8').replace('_tm2026', '');
-    if (captcha.answer !== expected) {
-      return res.status(400).json({ message: 'Mã bảo vệ không chính xác.' });
-    }
-  } catch (e) {
-    return res.status(400).json({ message: 'Mã bảo vệ không hợp lệ.' });
+  
+  const crypto = require('crypto');
+  const secret = process.env.SUPABASE_ANON_KEY || 'thuy_mong_secret_2026';
+  const expectedHash = crypto.createHmac('sha256', secret).update(captcha.answer.toUpperCase()).digest('hex');
+  
+  if (expectedHash !== captcha.token) {
+    return res.status(400).json({ message: 'Mã bảo vệ không chính xác.' });
   }
 
   const normalizedCustomer = {

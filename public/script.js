@@ -437,48 +437,35 @@ scrollButtons.forEach((button) => {
   });
 });
 
-function generateCaptcha() {
+async function generateCaptcha() {
   const canvas = document.getElementById('captcha-canvas');
   const ctx = canvas ? canvas.getContext('2d') : null;
   const inputToken = document.getElementById('captcha-token');
   const inputAnswer = document.getElementById('captcha-input');
   
   if (ctx && inputToken && inputAnswer) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let cap = '';
-    for(let i = 0; i < 5; i++) {
-      cap += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
-    for(let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
-      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
-      ctx.strokeStyle = `rgba(241,198,107, ${Math.random() * 0.5 + 0.2})`;
-      ctx.stroke();
-    }
-    
-    ctx.font = 'bold 22px Inter, sans-serif';
-    ctx.fillStyle = '#f1c66b';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    for(let i = 0; i < cap.length; i++) {
-      ctx.save();
-      ctx.translate(22 + i * 19, canvas.height / 2);
-      ctx.rotate((Math.random() - 0.5) * 0.4);
-      ctx.fillText(cap[i], 0, 0);
-      ctx.restore();
-    }
-    
-    inputToken.value = btoa(cap + '_tm2026');
-    inputAnswer.value = '';
-    
-    if (!canvas.dataset.clickable) {
-      canvas.addEventListener('click', generateCaptcha);
-      canvas.dataset.clickable = 'true';
+    try {
+      const response = await fetch('/api/captcha');
+      const data = await response.json();
+      
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = data.image;
+      
+      inputToken.value = data.token;
+      inputAnswer.value = '';
+      
+      if (!canvas.dataset.clickable) {
+        canvas.addEventListener('click', generateCaptcha);
+        canvas.dataset.clickable = 'true';
+        canvas.style.cursor = 'pointer';
+        canvas.title = 'Bấm để đổi mã mới';
+      }
+    } catch (e) {
+      console.error('Lỗi tải mã bảo vệ', e);
     }
   }
 }
