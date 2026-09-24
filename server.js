@@ -1218,7 +1218,12 @@ app.post('/api/admin/cleanup-orders', async (req, res) => {
       const hasNoImage = !o.proofImage;
       const isUnpaid = o.status !== 'Đã thanh toán';
       
-      if (isOld && hasNoImage && isUnpaid) {
+      const lowerName = String(o.customer?.name || '').toLowerCase();
+      const lowerEmail = String(o.customer?.email || '').toLowerCase();
+      const cleanPhone = String(o.customer?.phone || '').replace(/\D/g, '');
+      const isBot = lowerName.includes('qa bot') || lowerName.includes('test') || lowerEmail.includes('qa_bot') || cleanPhone === '0987654321' || lowerName.includes('bot');
+
+      if ((isOld && hasNoImage && isUnpaid) || isBot) {
         toDeleteCodes.push(o.orderCode);
         return false;
       }
