@@ -672,6 +672,14 @@ app.post('/api/orders', async (req, res) => {
     return res.status(400).json({ message: 'Email không hợp lệ. Vui lòng kiểm tra lại.' });
   }
 
+  // Anti-spam filters (Safe mode)
+  if (customer.website || (typeof customer.website === 'string' && customer.website.trim() !== '')) {
+    return res.status(400).json({ message: 'Lỗi xác thực hệ thống.' });
+  }
+  if (normalizedCustomer.email.indexOf('@example.com') !== -1 || normalizedCustomer.name.indexOf('Test Order') !== -1) {
+    return res.status(400).json({ message: 'Lỗi xác thực hệ thống.' });
+  }
+
   const items = cart.items.map((item) => ({
     id: item.id,
     name: item.name,

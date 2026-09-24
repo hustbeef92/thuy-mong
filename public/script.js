@@ -546,7 +546,8 @@ checkoutForm.addEventListener('submit', async (event) => {
     customer: {
       name: formData.get('name'),
       phone: formData.get('phone'),
-      email: formData.get('email') || ''
+      email: formData.get('email') || '',
+      website: formData.get('website') || ''
     },
     captcha: {
       a: Number(document.getElementById('captcha-a').value),
