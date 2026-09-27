@@ -764,6 +764,7 @@ async function loadData() {
     const catalog = Array.isArray(items) ? items : [];
 
     appState.tickets = catalog.filter((item) => item.type === 'ticket');
+    appState.tickets.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
     appState.merch = catalog.filter((item) => item.type === 'merch');
 
     const footerList = document.querySelectorAll('.site-footer li');
