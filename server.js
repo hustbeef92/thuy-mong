@@ -366,9 +366,9 @@ function createQrCodeUrl(order) {
 }
 
 function createBankPayment(order) {
-  const bankCode = process.env.BANK_CODE || 'TPB';
-  const accountNumber = process.env.BANK_ACCOUNT_NUMBER || '20327264235';
-  const accountName = process.env.BANK_ACCOUNT_NAME || 'TRINH THANH MY';
+  const bankCode = process.env.BANK_CODE || 'MB';
+  const accountNumber = process.env.BANK_ACCOUNT_NUMBER || '0000022225519';
+  const accountName = process.env.BANK_ACCOUNT_NAME || 'CHU ANH GIANG';
   const paymentQrUrl = `https://img.vietqr.io/image/${bankCode}-${accountNumber}-compact2.png?amount=${order.total}&addInfo=${encodeURIComponent(order.orderCode)}&accountName=${encodeURIComponent(accountName)}`;
 
   return {
@@ -634,10 +634,10 @@ app.get('/api/config', async (req, res) => {
       email: process.env.CONTACT_EMAIL || 'myth.superking@gmail.com'
     },
     payment: {
-      bankName: `${process.env.BANK_CODE || 'TPB'} Bank`,
-      accountNumber: process.env.BANK_ACCOUNT_NUMBER || '20327264235',
-      accountName: process.env.BANK_ACCOUNT_NAME || 'TRINH THANH MY',
-      webhookUrl: `${process.env.PUBLIC_BASE_URL || 'https://thuy-mong-sk.vercel.app'}/api/sepay-webhook`
+      bankName: `${process.env.BANK_CODE || 'MB'} Bank`,
+      accountNumber: process.env.BANK_ACCOUNT_NUMBER || '0000022225519',
+      accountName: process.env.BANK_ACCOUNT_NAME || 'CHU ANH GIANG',
+      webhookUrl: `${process.env.PUBLIC_BASE_URL || 'https://thuy-mong.vercel.app/'}/api/sepay-webhook`
     }
   });
 });
