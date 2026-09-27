@@ -1004,8 +1004,12 @@ app.post('/api/orders/:orderCode/cancel', async (req, res) => {
 // ==========================================
 // SEPAY WEBHOOK (XÁC NHẬN TIỀN VÀO)
 // ==========================================
-const webhookPaths = ['/api/sepay-webhook', '/sepay-webhook'];
-
+const webhookPaths = [
+  '/api/sepay-webhook',
+  '/sepay-webhook',
+  '/api/sepay/webhook',
+  '/sepay/webhook'
+];
 app.all(webhookPaths, async (req, res) => {
   if (req.method === 'GET') {
     return res.status(200).json({
