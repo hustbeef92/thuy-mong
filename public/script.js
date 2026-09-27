@@ -429,7 +429,9 @@ function startPaymentStatusPolling(orderCode, email) {
 
   const checkStatus = async () => {
     try {
-      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status${query}`);
+      const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status?_t=${Date.now()}${query}`, {
+        cache: 'no-store'
+      });
       if (!response.ok) return;
       const result = await response.json();
 
