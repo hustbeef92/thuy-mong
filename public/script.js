@@ -1,8 +1,12 @@
+const PENDING_ORDER_STORAGE_KEY = 'thuymong.pendingOrder';
+
 const appState = {
   tickets: [],
   merch: [],
   cart: [],
-  paymentPollTimer: null
+  paymentPollTimer: null,
+  paymentExpiryTimer: null,
+  pendingOrderRecovery: null
 };
 
 const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
@@ -14,29 +18,344 @@ const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
 const toast = document.getElementById('toast');
 
 function showToast(message) {
-  toast.textContent = message;
+  toast.innerHTML = `
+    <span class="toast-breadcrumb">Thủy Mộng</span>
+    <span class="toast-separator">/</span>
+    <span class="toast-breadcrumb">Thông báo</span>
+    <span class="toast-separator">/</span>
+    <span class="toast-text">${message}</span>
+  `;
   toast.classList.add('show');
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
+function toggleCheckoutSubmitButton(hasPendingOrder = false) {
+  const submitBtn = checkoutForm?.querySelector('button[type="submit"]');
+  if (!submitBtn) return;
+
+  if (hasPendingOrder) {
+    submitBtn.style.display = 'none'; // Ẩn nút tạo đơn khi đang có đơn chờ
+  } else {
+    submitBtn.style.display = ''; // Hiện lại nút khi đơn bị hủy hoặc hết hạn
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Thanh toán bằng QR';
+  }
+}
+function formatCountdownMs(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function startExpiryCountdown(expiresAt, container = document.getElementById('payment-account-info')) {
+  if (!expiresAt || !container) return;
+
+  clearInterval(appState.paymentExpiryTimer);
+
+  const targetTime = new Date(expiresAt).getTime();
+  const countdownEl = container.querySelector('.expiry-countdown');
+
+  const updateCountdown = () => {
+    const remainingMs = targetTime - Date.now();
+
+    // KHI ĐÃ HẾT 15 PHÚT
+    if (remainingMs <= 0) {
+      clearInterval(appState.paymentExpiryTimer);
+      clearInterval(appState.paymentPollTimer);
+      clearPendingOrder();
+      toggleCheckoutSubmitButton(false);
+      // Cập nhật lại box thanh toán: báo hết hạn và cho phép đặt lại
+      container.innerHTML = `
+        <div class="expired-order-box" style="padding: 20px; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 10px; text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 8px;">⏳</div>
+          <h4 style="color: #c53030; margin: 0 0 8px;">Thời gian giữ vé đã kết thúc</h4>
+          <p style="color: #4a5568; font-size: 14px; margin-bottom: 16px;">Đơn hàng của bạn đã hết hạn do quá 15 phút chưa hoàn tất chuyển khoản. Vé đã được nhả lại vào kho.</p>
+          <button type="button" class="btn btn-primary" id="btn-reorder" style="padding: 10px 20px; font-weight: bold; border-radius: 8px; cursor: pointer;">
+            Đặt đơn mới
+          </button>
+        </div>
+      `;
+
+      const reorderBtn = document.getElementById('btn-reorder');
+      if (reorderBtn) {
+        reorderBtn.addEventListener('click', () => {
+          document.getElementById('tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+
+      showToast('Đơn hàng đã hết hạn giữ vé.');
+      return;
+    }
+
+    if (countdownEl) {
+      countdownEl.textContent = `Thời gian giữ vé: ${formatCountdownMs(remainingMs)}`;
+    }
+  };
+
+  updateCountdown();
+  appState.paymentExpiryTimer = setInterval(updateCountdown, 1000);
+}
+
+function getStoredPendingOrder() {
+  try {
+    const raw = localStorage.getItem(PENDING_ORDER_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
+function savePendingOrder(order) {
+  if (!order || !order.orderCode || order.status !== 'Chờ thanh toán') {
+    localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({
+    orderCode: order.orderCode,
+    email: order.customer?.email || '',
+    expiresAt: order.expiresAt || null,
+    status: order.status
+  }));
+}
+
+function clearPendingOrder() {
+  localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+}
+
+function showPaymentSuccessModal(order = null) {
+  const modal = document.getElementById('payment-success-modal');
+  const message = document.getElementById('payment-success-message');
+  const meta = document.getElementById('payment-success-meta');
+  if (!modal || !message || !meta) return;
+
+  const orderCode = order?.orderCode || 'ĐƠN HÀNG';
+  message.textContent = 'Đơn hàng của bạn đã được xác nhận. QR check-in sẽ được gửi qua email hoặc hiển thị ngay trên màn hình.';
+  meta.innerHTML = `<strong>Mã đơn hàng:</strong> ${orderCode}`;
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function showPendingOrderRecoveryModal(order = null) {
+  const modal = document.getElementById('pending-order-modal');
+  if (!modal) return;
+
+  const orderCode = order?.orderCode || 'ĐƠN HÀNG';
+  const expiry = order?.expiresAt ? new Date(order.expiresAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '15:00';
+  const title = document.getElementById('pending-order-title');
+  const text = document.getElementById('pending-order-text');
+  const code = document.getElementById('pending-order-code');
+  if (title) title.textContent = 'Bạn đang có đơn chờ thanh toán';
+  if (text) text.textContent = `Đơn ${orderCode} giữ chỗ đến ${expiry}. Bạn muốn tiếp tục thanh toán hay hủy để tạo đơn mới?`;
+  if (code) code.textContent = `Mã đơn: ${orderCode}`;
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  appState.pendingOrderRecovery = order;
+}
+
+function hidePendingOrderRecoveryModal() {
+  const modal = document.getElementById('pending-order-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  appState.pendingOrderRecovery = null;
+}
+
+async function restorePendingOrderFromStorage() {
+  const stored = getStoredPendingOrder();
+  if (!stored?.orderCode) return;
+
+  // 1. Chỉ tự xóa nếu thời gian lưu cục bộ đã quá hạn
+  if (stored.expiresAt && new Date(stored.expiresAt).getTime() <= Date.now()) {
+    clearPendingOrder();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/orders/${encodeURIComponent(stored.orderCode)}/status${stored.email ? `?email=${encodeURIComponent(stored.email)}` : ''}`);
+
+    // NẾU BỊ RATE LIMIT (429) HOẶC LỖI SERVER (500) -> GIỮ NGUYÊN LOCALSTORAGE, KHÔNG XÓA!
+    if (response.status === 429 || response.status >= 500) {
+      console.warn('Hệ thống đang bận hoặc thao tác quá nhanh, giữ lại đơn pending.');
+      return;
+    }
+
+    const result = await response.json();
+
+    // Nếu đơn thực sự không tồn tại (404) hoặc không còn 'Chờ thanh toán' -> Mới xóa
+    if (!response.ok || !result.order) {
+      if (response.status === 404) {
+        clearPendingOrder();
+      }
+      return;
+    }
+
+    const expiresAtMs = new Date(result.order.expiresAt || stored.expiresAt).getTime();
+
+    // Nếu server báo đơn đã thanh toán hoặc đã hủy/hết hạn -> Xóa
+    if (result.order.status !== 'Chờ thanh toán' || expiresAtMs <= Date.now()) {
+      clearPendingOrder();
+      return;
+    }
+
+    // Đang có đơn còn hạn -> Mở popup và ẩn nút đặt vé
+    toggleCheckoutSubmitButton(true);
+
+    showPendingOrderRecoveryModal({
+      orderCode: result.order.orderCode,
+      email: stored.email || result.order.customer?.email || '',
+      expiresAt: result.order.expiresAt || stored.expiresAt || null,
+      status: result.order.status
+    });
+
+  } catch (error) {
+    // Lỗi mạng hoặc lag: TUYỆT ĐỐI KHÔNG XÓA LOCALSTORAGE CỦA KHÁCH
+    console.warn('Lỗi kết nối khi phục hồi đơn pending:', error);
+  }
+}
+async function continuePendingOrder(orderCode, email) {
+  hidePendingOrderRecoveryModal();
+  toggleCheckoutSubmitButton(true);
+
+  const paymentInfoEl = document.getElementById('payment-account-info');
+  if (paymentInfoEl) {
+    paymentInfoEl.innerHTML = '<p>Đang tải thông tin đơn đang chờ thanh toán...</p>';
+  }
+
+  try {
+    const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status${email ? `?email=${encodeURIComponent(email)}` : ''}`);
+    const result = await response.json();
+    if (!response.ok || !result.order) throw new Error(result.message || 'Không thể tải đơn chờ thanh toán.');
+
+    if (result.order.status !== 'Chờ thanh toán') {
+      clearPendingOrder();
+      toggleCheckoutSubmitButton(false);
+      return;
+    }
+
+    // LẤY TRỰC TIẾP TỪ SERVER TRẢ VỀ (ĂN THEO ENV TRÊN VERCEL)
+    const payment = result.payment;
+
+    if (paymentInfoEl && payment) {
+      paymentInfoEl.innerHTML = `
+        <h4>Quét QR để thanh toán</h4>
+        <img class="payment-qr" src="${payment.paymentQrUrl}" alt="QR thanh toán đơn ${result.order.orderCode}" />
+        <p><strong>Số tiền:</strong> ${formatCurrency(result.order.total)}</p>
+        <p><strong>Nội dung chuyển khoản:</strong> ${payment.transferContent}</p>
+        <p><strong>Ngân hàng:</strong> ${payment.bankName} · <strong>STK:</strong> ${payment.accountNumber}</p>
+        <div class="expiry-countdown" aria-live="polite">Đang tính thời gian giữ vé...</div>
+        <p class="payment-note">Bạn đang tiếp tục thanh toán cho đơn này. Hệ thống sẽ tự xác nhận khi nhận được tiền.</p>
+        <button type="button" class="btn btn-secondary cancel-order-btn" data-order-code="${result.order.orderCode}">Hủy đơn</button>
+      `;
+
+      const cancelBtn = paymentInfoEl.querySelector('.cancel-order-btn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => cancelPendingOrder(cancelBtn.dataset.orderCode));
+      }
+
+      startExpiryCountdown(result.order.expiresAt, paymentInfoEl);
+      savePendingOrder(result.order);
+      startPaymentStatusPolling(result.order.orderCode, result.order.customer?.email || '');
+
+      // Focus và cuộn khung QR vào giữa màn hình
+      paymentInfoEl.setAttribute('tabindex', '-1');
+      paymentInfoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      paymentInfoEl.focus({ preventScroll: true });
+    }
+  } catch (error) {
+    clearPendingOrder();
+    toggleCheckoutSubmitButton(false);
+    showToast(error.message || 'Không thể tiếp tục đơn chờ thanh toán.');
+  }
+}
+async function cancelPendingOrder(orderCode) {
+  if (!orderCode) {
+    clearPendingOrder();
+    hidePendingOrderRecoveryModal();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+
+    if (!response.ok && result.message && result.message.includes('đã thanh toán')) {
+      showToast(result.message);
+      return;
+    }
+  } catch (error) {
+    console.warn('Lỗi gọi API hủy đơn:', error);
+  } finally {
+    clearInterval(appState.paymentPollTimer);
+    clearInterval(appState.paymentExpiryTimer);
+    clearPendingOrder();
+    hidePendingOrderRecoveryModal();
+    toggleCheckoutSubmitButton(false);
+    clearPendingOrder();
+    hidePendingOrderRecoveryModal();
+    const paymentInfoEl = document.getElementById('payment-account-info');
+    if (paymentInfoEl) {
+      paymentInfoEl.innerHTML = `
+        <div class="cancelled-order-box" style="padding: 16px; background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; text-align: center;">
+          <h4 style="color: #c53030; margin-top: 0;">Đơn hàng đã được hủy</h4>
+          <p style="margin: 0; color: #4a5568;">Bạn có thể chọn lại vé và đặt đơn mới ngay bây giờ.</p>
+        </div>
+      `;
+    }
+    showToast('Đã hủy đơn hàng thành công.');
+  }
+}
+
+function hidePaymentSuccessModal() {
+  const modal = document.getElementById('payment-success-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function getItemMax(item) {
+  if (!item) return 999;
+  const value = Number(item.quantity ?? item.baseQuantity ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
 
 function addItemToCart(item, quantity = 1) {
+  const normalizedQty = Number(quantity);
+  const max = getItemMax(item);
+
+  if (!Number.isFinite(normalizedQty) || normalizedQty <= 0) {
+    showToast('Số lượng phải lớn hơn 0.');
+    return;
+  }
+
   const existing = appState.cart.find((entry) => entry.id === item.id && entry.type === item.type);
-  const max = item.quantity !== undefined ? item.quantity : 999;
+
+  if (max <= 0) {
+    showToast('Sản phẩm đã hết hàng.');
+    return;
+  }
 
   if (existing) {
-    if (existing.quantity + quantity > max) {
-      alert(`Chỉ còn ${max} sản phẩm trong kho!`);
+    const nextQty = existing.quantity + normalizedQty;
+    if (nextQty > max) {
+      showToast(`Chỉ còn ${max} sản phẩm trong kho!`);
       existing.quantity = max;
     } else {
-      existing.quantity += quantity;
+      existing.quantity = nextQty;
     }
   } else {
-    if (quantity > max) {
-      alert(`Chỉ còn ${max} sản phẩm trong kho!`);
-      quantity = max;
+    const safeQty = Math.min(normalizedQty, max);
+    if (normalizedQty > max) {
+      showToast(`Chỉ còn ${max} sản phẩm trong kho!`);
     }
-    appState.cart.push({ ...item, quantity });
+    appState.cart.push({ ...item, quantity: safeQty });
   }
 
   renderCart();
@@ -63,11 +382,11 @@ function changeCartQuantity(id, type, delta) {
 
   const source = type === 'ticket' ? appState.tickets : appState.merch;
   const originalItem = source.find(entry => entry.id === id);
-  const max = originalItem?.quantity !== undefined ? originalItem.quantity : 999;
+  const max = getItemMax(originalItem);
 
   if (delta > 0) {
     if (item.quantity + delta > max) {
-      alert(`Chỉ còn ${max} sản phẩm trong kho!`);
+      showToast(`Chỉ còn ${max} sản phẩm trong kho!`);
       item.quantity = max;
     } else {
       item.quantity += delta;
@@ -113,13 +432,27 @@ function startPaymentStatusPolling(orderCode, email) {
       const response = await fetch(`/api/orders/${encodeURIComponent(orderCode)}/status${query}`);
       if (!response.ok) return;
       const result = await response.json();
+
+      if (result.order.status === 'Chờ thanh toán' && result.order.expiresAt) {
+        const paymentInfoEl = document.getElementById('payment-account-info');
+        if (paymentInfoEl) {
+          const existingCountdown = paymentInfoEl.querySelector('.expiry-countdown');
+          if (existingCountdown) {
+            startExpiryCountdown(result.order.expiresAt, paymentInfoEl);
+          }
+        }
+      }
+
       renderPaidOrderStatus(result.order);
       if (result.order.status === 'Đã thanh toán') {
         clearInterval(appState.paymentPollTimer);
+        clearInterval(appState.paymentExpiryTimer);
+        clearPendingOrder();
         showToast('Đã nhận thanh toán và cập nhật trạng thái đơn hàng.');
         appState.cart = [];
         renderCart();
         updateCartButton();
+        showPaymentSuccessModal(result.order);
       }
     } catch (error) {
       console.warn('Unable to refresh payment status:', error);
@@ -145,7 +478,8 @@ function renderTickets() {
   const container = document.getElementById('ticket-grid');
   container.innerHTML = appState.tickets
     .map((ticket) => {
-      const isSoldOut = ticket.quantity !== undefined && ticket.quantity <= 0;
+      const max = getItemMax(ticket);
+      const isSoldOut = max <= 0;
       return `
       <article class="ticket-card ${isSoldOut ? 'sold-out' : ''}">
         <img src="${getTicketImageSrc(ticket)}" alt="${ticket.name}" class="ticket-card-img" />
@@ -155,15 +489,15 @@ function renderTickets() {
         </div>
         <p>${ticket.description || ticket.benefit || ''}</p>
         <div class="choose-row">
-          ${isSoldOut 
-            ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết vé</span>'
-            : `<div class="qty-control">
+          ${isSoldOut
+          ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết vé</span>'
+          : `<div class="qty-control">
                 <button type="button" class="qty-btn" data-action="decrease" data-id="${ticket.id}" data-type="ticket">−</button>
-                <input type="number" class="qty-input" data-qty="${ticket.id}" data-type="ticket" value="1" min="1" max="${ticket.quantity !== undefined ? ticket.quantity : 999}" />
+                <input type="number" class="qty-input" data-qty="${ticket.id}" data-type="ticket" value="1" min="1" max="${max}" />
                 <button type="button" class="qty-btn" data-action="increase" data-id="${ticket.id}" data-type="ticket">+</button>
               </div>
               <button class="add-to-cart" data-add="${ticket.id}" data-type="ticket">Thêm</button>`
-          }
+        }
         </div>
       </article>
     `;
@@ -183,8 +517,11 @@ function getMerchDesc(item) {
 function renderMerch() {
   const container = document.getElementById('merch-grid');
   container.innerHTML = appState.merch
-    .map((item) => `
-      <article class="merch-card">
+    .map((item) => {
+      const max = getItemMax(item);
+      const isSoldOut = max <= 0;
+      return `
+      <article class="merch-card ${isSoldOut ? 'sold-out' : ''}">
         ${getMerchImageHtml(item)}
         <div class="ticket-top">
           <h3>${item.name}</h3>
@@ -192,28 +529,39 @@ function renderMerch() {
         </div>
         <p>${getMerchDesc(item)}</p>
         <div class="choose-row">
-          <div class="qty-control">
-            <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
-            <input type="number" class="qty-input" data-qty="${item.id}" data-type="merch" value="1" min="1" max="${item.quantity !== undefined ? item.quantity : 999}" />
-            <button type="button" class="qty-btn" data-action="increase" data-id="${item.id}" data-type="merch">+</button>
-          </div>
-          <button class="add-to-cart" data-add="${item.id}" data-type="merch">Thêm</button>
+          ${isSoldOut
+          ? '<span class="sold-out-badge" style="color: #e74c3c; font-weight: bold; padding: 8px 16px; background: rgba(231, 76, 60, 0.1); border-radius: 4px; width: 100%; text-align: center;">Đã hết hàng</span>'
+          : `<div class="qty-control">
+                <button type="button" class="qty-btn" data-action="decrease" data-id="${item.id}" data-type="merch">−</button>
+                <input type="number" class="qty-input" data-qty="${item.id}" data-type="merch" value="1" min="1" max="${max}" />
+                <button type="button" class="qty-btn" data-action="increase" data-id="${item.id}" data-type="merch">+</button>
+              </div>
+              <button class="add-to-cart" data-add="${item.id}" data-type="merch">Thêm</button>`}
         </div>
       </article>
-    `)
+    `;
+    })
     .join('');
 
   bindQuantityButtons(container);
   bindAddButtons(container);
 }
 
+function clampQuantity(value, max) {
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 999;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.min(Math.max(1, parsed), safeMax);
+}
+
 function updateQtyValue(id, type, delta) {
   const qtyEl = document.querySelector(`[data-qty="${id}"]`);
   if (!qtyEl) return;
 
-  const current = Number(qtyEl.textContent) || 1;
-  const next = Math.max(1, current + delta);
-  qtyEl.textContent = next;
+  const current = Number(qtyEl.value) || 1;
+  const max = Number(qtyEl.getAttribute('max')) || 999;
+  const next = clampQuantity(current + delta, max);
+  qtyEl.value = next;
 
   const addButton = document.querySelector(`[data-add="${id}"][data-type="${type}"]`);
   if (addButton) {
@@ -230,18 +578,37 @@ function bindQuantityButtons(container) {
 
       const current = Number(qtyEl.value) || 1;
       const max = Number(qtyEl.getAttribute('max')) || 999;
-      const next = action === 'increase' ? Math.min(max, current + 1) : Math.max(1, current - 1);
+
+      if (action === 'increase' && current >= max) {
+        qtyEl.value = String(max);
+        showToast(`Chỉ còn ${max} sản phẩm trong kho!`);
+        return;
+      }
+
+      if (action === 'decrease' && current <= 1) {
+        qtyEl.value = '1';
+        return;
+      }
+
+      const next = action === 'increase' ? clampQuantity(current + 1, max) : clampQuantity(current - 1, max);
       qtyEl.value = next;
     });
   });
 
   container.querySelectorAll('input.qty-input').forEach((input) => {
+    input.addEventListener('input', () => {
+      const max = Number(input.getAttribute('max')) || 999;
+      const val = clampQuantity(input.value, max);
+      input.value = String(val);
+      if (Number(input.value) >= max && Number(input.value) > 1) {
+        showToast(`Chỉ còn ${max} sản phẩm trong kho!`);
+      }
+    });
+
     input.addEventListener('change', () => {
       const max = Number(input.getAttribute('max')) || 999;
-      let val = Number(input.value);
-      if (isNaN(val) || val < 1) val = 1;
-      if (val > max) val = max;
-      input.value = val;
+      const val = clampQuantity(input.value, max);
+      input.value = String(val);
     });
   });
 }
@@ -251,7 +618,13 @@ function bindAddButtons(container) {
     button.addEventListener('click', () => {
       const id = button.dataset.add;
       const type = button.dataset.type;
-      const quantity = Number(document.querySelector(`input[data-qty="${id}"]`)?.value || 1);
+      const inputEl = document.querySelector(`input[data-qty="${id}"]`);
+      const max = Number(inputEl?.getAttribute('max')) || 999;
+      const quantity = clampQuantity(inputEl?.value || 1, max);
+
+      if (inputEl) {
+        inputEl.value = String(quantity);
+      }
 
       const source = type === 'ticket' ? appState.tickets : appState.merch;
       const item = source.find((entry) => entry.id === id);
@@ -386,18 +759,19 @@ function renderCart() {
 
 async function loadData() {
   try {
-    const response = await fetch('/api/config');
-    const data = await response.json();
+    const response = await fetch('/api/admin/items');
+    const items = await response.json();
+    const catalog = Array.isArray(items) ? items : [];
 
-    appState.tickets = data.tickets;
-    appState.merch = data.merch;
+    appState.tickets = catalog.filter((item) => item.type === 'ticket');
+    appState.merch = catalog.filter((item) => item.type === 'merch');
 
     const footerList = document.querySelectorAll('.site-footer li');
-    if (data.contact && footerList.length >= 4) {
-      footerList[0].textContent = data.contact.unit;
-      footerList[1].textContent = data.contact.address;
-      footerList[2].textContent = data.contact.phone;
-      footerList[3].textContent = data.contact.email;
+    if (footerList.length >= 4) {
+      footerList[0].textContent = 'Nhà Hát Múa Rối Việt Nam';
+      footerList[1].textContent = '361 Trường Chinh, Thanh Xuân, Hà Nội';
+      footerList[2].textContent = '0327264235';
+      footerList[3].textContent = 'myth.superking@gmail.com';
     }
 
     renderTickets();
@@ -442,22 +816,22 @@ async function generateCaptcha() {
   const ctx = canvas ? canvas.getContext('2d') : null;
   const inputToken = document.getElementById('captcha-token');
   const inputAnswer = document.getElementById('captcha-input');
-  
+
   if (ctx && inputToken && inputAnswer) {
     try {
       const response = await fetch('/api/captcha');
       const data = await response.json();
-      
+
       const img = new Image();
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       };
       img.src = data.image;
-      
+
       inputToken.value = data.token;
       inputAnswer.value = '';
-      
+
       if (!canvas.dataset.clickable) {
         canvas.addEventListener('click', generateCaptcha);
         canvas.dataset.clickable = 'true';
@@ -511,13 +885,13 @@ async function readPaymentProofAsDataUrl(file) {
             try {
               const formData = new FormData();
               formData.append('image', blob, file.name || 'receipt.jpg');
-              
+
               // Đẩy lên ImgBB
               const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
                 method: 'POST',
                 body: formData
               });
-              
+
               const data = await res.json();
               if (data && data.success) {
                 resolve(data.data.url); // Trả về URL của ảnh
@@ -638,56 +1012,17 @@ checkoutForm.addEventListener('submit', async (event) => {
         <p><strong>Số tiền:</strong> ${formatCurrency(result.order.total)}</p>
         <p><strong>Nội dung chuyển khoản:</strong> ${payment.transferContent}</p>
         <p><strong>Ngân hàng:</strong> ${payment.bankName} · <strong>STK:</strong> ${payment.accountNumber}</p>
+        <div class="expiry-countdown" aria-live="polite">Đang tính thời gian giữ vé...</div>
         <p class="payment-note">Sau khi chuyển khoản thành công, hệ thống sẽ tự động xác nhận thanh toán và hiển thị QR check-in ngay trên màn hình cho bạn.</p>
-        <div class="proof-upload-box" style="margin-top: 18px; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; background: rgba(255,255,255,0.03);">
-          <p style="margin: 0 0 8px; font-weight: 600;">Đã chuyển khoản xong? Tải ảnh biên lai/màn hình tại đây:</p>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <input type="file" id="post-payment-proof" accept="image/*" style="font-size: 0.85rem;" />
-            <button type="button" class="btn btn-outline" id="btn-upload-proof" style="padding: 6px 14px; font-size: 0.85rem;">Gửi ảnh biên lai</button>
-            <button type="button" class="btn btn-primary" id="btn-confirm-payment" style="padding: 6px 14px; font-size: 0.85rem; display: none;">Xác nhận đã thanh toán</button>
-          </div>
-          <div id="proof-status-msg" style="margin-top: 8px; font-size: 0.85rem;"></div>
-        </div>
+        <button type="button" class="btn btn-secondary cancel-order-btn" data-order-code="${result.order.orderCode}">Hủy đơn</button>
       `;
 
-      const postPaymentInput = document.getElementById('post-payment-proof');
-      const btnUploadProof = document.getElementById('btn-upload-proof');
-      const proofStatusMsg = document.getElementById('proof-status-msg');
+      startExpiryCountdown(result.order.expiresAt, paymentInfoEl);
+      savePendingOrder(result.order);
 
-      if (btnUploadProof && postPaymentInput) {
-        btnUploadProof.addEventListener('click', async () => {
-          if (!postPaymentInput.files || !postPaymentInput.files[0]) {
-            showToast('Vui lòng chọn ảnh chụp biên lai/màn hình.');
-            return;
-          }
-          try {
-            btnUploadProof.disabled = true;
-            btnUploadProof.textContent = 'Đang tải lên...';
-            proofStatusMsg.textContent = 'Đang xử lý và gửi ảnh...';
-            proofStatusMsg.style.color = 'var(--gold)';
-            const proofData = await readPaymentProofAsDataUrl(postPaymentInput.files[0]);
-            const uploadRes = await fetch(`/api/orders/${result.order.orderCode}/proof`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ proofImage: proofData })
-            });
-            const uploadJson = await uploadRes.json();
-            if (!uploadRes.ok) throw new Error(uploadJson.message || 'Tải ảnh thất bại');
-            proofStatusMsg.textContent = '✓ Đã tải ảnh biên lai thành công! Bấm xác nhận để hoàn tất.';
-            proofStatusMsg.style.color = '#2da76d';
-            showToast('Đã tải ảnh biên lai thành công!');
-            // Hiện nút xác nhận sau khi gửi ảnh thành công
-            const confirmBtn = document.getElementById('btn-confirm-payment');
-            if (confirmBtn) confirmBtn.style.display = 'inline-block';
-          } catch (err) {
-            proofStatusMsg.textContent = 'Lỗi: ' + (err.message || 'Không thể tải ảnh');
-            proofStatusMsg.style.color = '#e74c3c';
-            showToast(err.message || 'Tải ảnh thất bại');
-          } finally {
-            btnUploadProof.disabled = false;
-            btnUploadProof.textContent = 'Gửi ảnh biên lai';
-          }
-        });
+      const cancelBtn = paymentInfoEl.querySelector('.cancel-order-btn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => cancelPendingOrder(cancelBtn.dataset.orderCode));
       }
 
       const btnConfirmPayment = document.getElementById('btn-confirm-payment');
@@ -696,23 +1031,20 @@ checkoutForm.addEventListener('submit', async (event) => {
           try {
             btnConfirmPayment.disabled = true;
             btnConfirmPayment.textContent = 'Đang xác nhận...';
-            proofStatusMsg.textContent = 'Đang gửi thông báo xác nhận...';
-            proofStatusMsg.style.color = 'var(--gold)';
-            
             const confirmRes = await fetch(`/api/orders/${result.order.orderCode}/confirm`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' }
             });
-            
+
             const confirmJson = await confirmRes.json();
             if (!confirmRes.ok) throw new Error(confirmJson.message || 'Xác nhận thất bại');
-            
-            // Ẩn nút xác nhận sau khi thành công
+
             btnConfirmPayment.style.display = 'none';
-            proofStatusMsg.textContent = '✓ Bạn đã thanh toán! Ban tổ chức sẽ kiểm tra và xác nhận sớm. Nếu trong vòng 12 tiếng kể từ khi đăng ký bạn vẫn chưa nhận được mail xác nhận, hãy nhắn chúng mình qua Fanpage: Thuỷ Mộng';
-            proofStatusMsg.style.color = '#2da76d';
+            clearPendingOrder();
+            toggleCheckoutSubmitButton(false);
             showToast('Đã gửi xác nhận thanh toán!');
-            
+            showPaymentSuccessModal(result.order);
+
             appState.cart = [];
             renderCart();
             updateCartButton();
@@ -721,21 +1053,24 @@ checkoutForm.addEventListener('submit', async (event) => {
               submitBtn.textContent = 'Thanh toán bằng QR';
             }
           } catch (err) {
-            proofStatusMsg.textContent = 'Lỗi: ' + (err.message || 'Không thể xác nhận');
-            proofStatusMsg.style.color = '#e74c3c';
             showToast(err.message || 'Xác nhận thất bại');
             btnConfirmPayment.disabled = false;
             btnConfirmPayment.textContent = 'Xác nhận đã thanh toán';
           }
         });
       }
+
+      // Focus và cuộn trực tiếp vào khối QR
+      paymentInfoEl.setAttribute('tabindex', '-1');
+      paymentInfoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      paymentInfoEl.focus({ preventScroll: true });
     }
+
     startPaymentStatusPolling(result.order.orderCode, result.order.customer.email || '');
     showToast('Đơn hàng đã tạo. Vui lòng quét QR để thanh toán.');
-    if (submitBtn) {
-      submitBtn.textContent = 'Kéo xuống dưới để quét QR';
-    }
-    document.getElementById('checkout').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Ẩn nút tạo đơn khi đã có đơn chờ thanh toán
+    toggleCheckoutSubmitButton(true);
   } catch (error) {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -743,7 +1078,7 @@ checkoutForm.addEventListener('submit', async (event) => {
     }
     showToast(error.message || 'Có lỗi xảy ra khi đặt vé.');
   }
-});
+}); 
 
 const navBookButton = document.getElementById('nav-book-button');
 if (navBookButton) {
@@ -752,4 +1087,50 @@ if (navBookButton) {
   });
 }
 
+document.querySelectorAll('[data-close-success-modal]').forEach((el) => {
+  el.addEventListener('click', hidePaymentSuccessModal);
+});
+
+document.querySelectorAll('[data-close-pending-order]').forEach((el) => {
+  el.addEventListener('click', hidePendingOrderRecoveryModal);
+});
+
+const pendingOrderContinueBtn = document.getElementById('pending-order-continue-btn') || document.getElementById('pending-order-continue');
+if (pendingOrderContinueBtn) {
+  pendingOrderContinueBtn.addEventListener('click', async () => {
+    const order = appState.pendingOrderRecovery || getStoredPendingOrder();
+    if (!order?.orderCode) {
+      hidePendingOrderRecoveryModal();
+      return;
+    }
+
+    await continuePendingOrder(order.orderCode, order.email || '');
+  });
+}
+
+const pendingOrderCancelBtn = document.getElementById('pending-order-cancel-btn') || document.getElementById('pending-order-cancel');
+if (pendingOrderCancelBtn) {
+  pendingOrderCancelBtn.addEventListener('click', async () => {
+    const order = appState.pendingOrderRecovery || getStoredPendingOrder();
+    const orderCode = order?.orderCode;
+
+    pendingOrderCancelBtn.disabled = true;
+    pendingOrderCancelBtn.textContent = 'Đang hủy...';
+
+    try {
+      if (orderCode) {
+        await cancelPendingOrder(orderCode);
+      } else {
+        clearPendingOrder();
+        hidePendingOrderRecoveryModal();
+        toggleCheckoutSubmitButton(false);
+      }
+    } finally {
+      pendingOrderCancelBtn.disabled = false;
+      pendingOrderCancelBtn.textContent = 'Hủy đơn';
+    }
+  });
+}
+
 loadData();
+restorePendingOrderFromStorage();

@@ -13,6 +13,75 @@ const request = async (fetchImpl, method, path, body, port) => {
   return { status: response.status, json };
 };
 
+test('GET /api/sepay-webhook responds successfully as a webhook health check', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const response = await global.fetch(`http://127.0.0.1:${port}/api/sepay-webhook`, { method: 'GET' });
+
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).success, true);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/orders stores expiry metadata and marks orders as expired when time passes', async () => {
+  process.env.ORDER_EXPIRY_MINUTES = '0.001';
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const result = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách hết hạn', phone: '0900000001', email: 'expired@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK',
+      captcha: { token: 'skip', answer: 'skip' }
+    }, port);
+
+    assert.equal(result.status, 201);
+    assert.ok(result.json.order.expiresAt);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    const status = await request(global.fetch, 'GET', `/api/orders/${result.json.order.orderCode}/status?email=expired%40example.com`, null, port);
+    assert.equal(status.status, 200);
+    assert.equal(status.json.order.status, 'Hết hạn');
+  } finally {
+    delete process.env.ORDER_EXPIRY_MINUTES;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/orders enforces rate limiting for suspicious repeated checkout attempts', async () => {
+  process.env.ORDER_RATE_LIMIT_ENABLED = 'true';
+  process.env.ORDER_RATE_LIMIT_WINDOW_MS = '60000';
+  process.env.ORDER_RATE_LIMIT_MAX_REQUESTS = '2';
+
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const body = {
+      customer: { name: 'Khách spam', phone: '0901111111', email: 'spam@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK',
+      captcha: { token: 'skip', answer: 'skip' }
+    };
+
+    const first = await request(global.fetch, 'POST', '/api/orders', body, port);
+    const second = await request(global.fetch, 'POST', '/api/orders', body, port);
+    const third = await request(global.fetch, 'POST', '/api/orders', body, port);
+
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 201);
+    assert.equal(third.status, 429);
+  } finally {
+    delete process.env.ORDER_RATE_LIMIT_ENABLED;
+    delete process.env.ORDER_RATE_LIMIT_WINDOW_MS;
+    delete process.env.ORDER_RATE_LIMIT_MAX_REQUESTS;
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test('POST /api/orders creates a pending order with total and orderCode', async () => {
   const server = app.listen(0);
   try {
@@ -28,10 +97,41 @@ test('POST /api/orders creates a pending order with total and orderCode', async 
     assert.equal(result.json.order.status, 'Chờ thanh toán');
     assert.equal(result.json.order.total, 200000);
     assert.ok(result.json.order.orderCode);
+    assert.ok(result.json.order.expiresAt);
 
     const status = await request(global.fetch, 'GET', `/api/orders/${result.json.order.orderCode}/status?email=a%40example.com`, null, port);
     assert.equal(status.status, 200);
     assert.equal(status.json.order.status, 'Chờ thanh toán');
+    assert.ok(status.json.order.expiresAt);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('POST /api/orders/:orderCode/cancel frees the pending slot so customer can re-create order immediately', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    const payload = {
+      customer: { name: 'Khách hủy đơn', phone: '0909999999', email: 'cancel@example.com' },
+      cart: { items: [{ id: 'pt', name: 'Vé Phổ Thông', price: 100000, quantity: 1, type: 'ticket' }] },
+      paymentMethod: 'BANK',
+      captcha: { token: 'skip', answer: 'skip' }
+    };
+
+    const first = await request(global.fetch, 'POST', '/api/orders', payload, port);
+    assert.equal(first.status, 201);
+    assert.equal(first.json.order.status, 'Chờ thanh toán');
+
+    const cancel = await request(global.fetch, 'POST', `/api/orders/${first.json.order.orderCode}/cancel`, {}, port);
+    assert.equal(cancel.status, 200);
+    assert.equal(cancel.json.success, true);
+    assert.equal(cancel.json.order.status, 'Đã hủy');
+
+    const second = await request(global.fetch, 'POST', '/api/orders', payload, port);
+    assert.equal(second.status, 201);
+    assert.equal(second.json.order.status, 'Chờ thanh toán');
+    assert.notEqual(second.json.order.orderCode, first.json.order.orderCode);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

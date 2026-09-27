@@ -16,8 +16,11 @@
   "author": "GitHub Copilot",
   "license": "MIT",
   "dependencies": {
-    "dotenv": "^18.0.0",
-    "express": "^4.19.2",
-    "nodemailer": "^6.9.13"
+    "dotenv": "^18.0.3",
+    "express": "^4.22.3",
+    "nodemailer": "^6.10.1"
+  },
+  "directories": {
+    "test": "test"
   }
 }
