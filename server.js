@@ -454,7 +454,7 @@ async function sendGmailSmtpEmail(order) {
   const checkinText = process.env.EVENT_CHECKIN_TEXT || '17:30 - 19:35 — Thứ Bảy, 17/10/2026';
   const venueText = process.env.EVENT_VENUE || 'Nhà Hát Múa Rối Việt Nam, 361 Trường Chinh, Thanh Xuân, Hà Nội';
   const contactPhone = process.env.CONTACT_PHONE || '0327264235';
-  const contactEmail = process.env.CONTACT_EMAIL || 'myth.superking@gmail.com';
+  const contactEmail = process.env.CONTACT_EMAIL || 'anhgiangchu@gmail.com';
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #222; line-height: 1.6; border: 1px solid #e8decb; border-radius: 12px; overflow: hidden; background: #ffffff;">
@@ -631,7 +631,7 @@ app.get('/api/config', async (req, res) => {
       unit: 'Nhà Hát Múa Rối Việt Nam',
       address: process.env.EVENT_VENUE || '361 Trường Chinh, Thanh Xuân, Hà Nội',
       phone: process.env.CONTACT_PHONE || '0327264235',
-      email: process.env.CONTACT_EMAIL || 'myth.superking@gmail.com'
+      email: process.env.CONTACT_EMAIL || 'anhgiangchu@gmail.com'
     },
     payment: {
       bankName: `${process.env.BANK_CODE || 'MB'} Bank`,

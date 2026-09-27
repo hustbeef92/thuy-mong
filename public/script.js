@@ -772,7 +772,7 @@ async function loadData() {
       footerList[0].textContent = 'Nhà Hát Múa Rối Việt Nam';
       footerList[1].textContent = '361 Trường Chinh, Thanh Xuân, Hà Nội';
       footerList[2].textContent = '0327264235';
-      footerList[3].textContent = 'myth.superking@gmail.com';
+      footerList[3].textContent = 'anhgiangchu@gmail.com';
     }
 
     renderTickets();
@@ -1079,7 +1079,7 @@ checkoutForm.addEventListener('submit', async (event) => {
     }
     showToast(error.message || 'Có lỗi xảy ra khi đặt vé.');
   }
-}); 
+});
 
 const navBookButton = document.getElementById('nav-book-button');
 if (navBookButton) {
