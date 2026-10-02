@@ -745,7 +745,7 @@ function renderCart() {
               <span style="color: #2da76d; font-weight: 600;">Giảm ${percent}% tổng hóa đơn</span>
             </div>
             <div class="cart-item-actions">
-              <span class="voucher-tag-pill" style="color: #2da76d; border-color: rgba(45, 167, 109, 0.4); background: rgba(45, 167, 109, 0.1);">Giftcode: samloc123</span>
+              <span class="voucher-tag-pill" style="color: #2da76d; border-color: rgba(45, 167, 109, 0.4); background: rgba(45, 167, 109, 0.1);">Đã kích hoạt Giftcode</span>
               <button type="button" class="cart-remove" data-cart-action="remove" data-id="${item.id}" data-type="${item.type}">Xóa</button>
             </div>
           </div>
@@ -824,7 +824,7 @@ function renderVouchers() {
           <h3 class="voucher-title">${item.name}</h3>
           <p class="voucher-desc">${item.description || item.benefit || `Giảm ${percent}% trực tiếp trên tổng hóa đơn thanh toán.`}</p>
           <div class="voucher-code-hint">
-            <span>🔒 Nhập Giftcode: <strong>samloc123</strong></span>
+            <span>🔒 Yêu cầu mã Giftcode</span>
           </div>
         </div>
         <div class="voucher-footer">
@@ -889,7 +889,8 @@ function handleGiftcodeSubmit() {
   const errorEl = document.getElementById('giftcode-error-msg');
   const code = inputEl ? inputEl.value.trim().toLowerCase() : '';
 
-  if (code !== 'samloc123') {
+  const expectedCode = atob('c2FtbG9jMTIz');
+  if (code !== expectedCode) {
     if (errorEl) {
       errorEl.textContent = 'Mã giftcode không chính xác! Vui lòng nhập lại.';
       errorEl.classList.add('show');
@@ -946,9 +947,9 @@ async function loadData() {
     appState.vouchers = catalog.filter((item) => item.type === 'voucher');
 
     const defaultVouchersList = [
-      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
-      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
-      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' }
+      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' },
+      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' },
+      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' }
     ];
 
     if (!appState.vouchers || appState.vouchers.length === 0) {
@@ -985,9 +986,9 @@ async function loadData() {
     ];
 
     appState.vouchers = [
-      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
-      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
-      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' }
+      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' },
+      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' },
+      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.' }
     ];
 
     renderTickets();

@@ -99,7 +99,7 @@ const DEFAULT_VOUCHERS = [
     quantity: 9999,
     discountPercent: 5,
     benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.',
-    description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+    description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.'
   },
   {
     id: 'voucher-10',
@@ -111,7 +111,7 @@ const DEFAULT_VOUCHERS = [
     quantity: 9999,
     discountPercent: 10,
     benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.',
-    description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+    description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.'
   },
   {
     id: 'voucher-15',
@@ -123,7 +123,7 @@ const DEFAULT_VOUCHERS = [
     quantity: 9999,
     discountPercent: 15,
     benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.',
-    description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+    description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập đúng mã giftcode.'
   }
 ];
 
