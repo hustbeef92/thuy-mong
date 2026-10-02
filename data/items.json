@@ -1,0 +1,110 @@
+[
+  {
+    "id": "sao-may",
+    "name": "Vé Sao Mây",
+    "title": "Hạng vé Sao Mây",
+    "type": "ticket",
+    "price": 150000,
+    "baseQuantity": 50,
+    "quantity": 50,
+    "benefit": "Ghế khu vực tiêu chuẩn, thưởng thức trọn vẹn đêm diễn múa rối nước.",
+    "description": "Ghế khu vực tiêu chuẩn, thưởng thức trọn vẹn đêm diễn múa rối nước.",
+    "image": "/assets/sao-may.jpg"
+  },
+  {
+    "id": "thanh-la",
+    "name": "Vé Thanh La",
+    "title": "Hạng vé Thanh La",
+    "type": "ticket",
+    "price": 200000,
+    "baseQuantity": 50,
+    "quantity": 50,
+    "benefit": "Ghế trung tâm sân khấu, tặng kèm quạt giấy thiết kế độc quyền Thủy Mộng.",
+    "description": "Ghế trung tâm sân khấu, tặng kèm quạt giấy thiết kế độc quyền Thủy Mộng.",
+    "image": "/assets/thanh-la.jpg"
+  },
+  {
+    "id": "y-mon",
+    "name": "Vé Ý Môn",
+    "title": "Hạng vé Ý Môn",
+    "type": "ticket",
+    "price": 250000,
+    "baseQuantity": 40,
+    "quantity": 40,
+    "benefit": "Ghế cận sân khấu tầm nhìn đẹp, tặng túi vải canvas Thủy Mộng và quạt giấy.",
+    "description": "Ghế cận sân khấu tầm nhìn đẹp, tặng túi vải canvas Thủy Mộng và quạt giấy.",
+    "image": "/assets/y-mon.jpg"
+  },
+  {
+    "id": "tu-linh",
+    "name": "Vé Tứ Linh",
+    "title": "Hạng vé Tứ Linh (VIP)",
+    "type": "ticket",
+    "price": 300000,
+    "baseQuantity": 30,
+    "quantity": 30,
+    "benefit": "Hàng ghế VIP đầu tiên sát mặt nước, lối check-in riêng, trọn bộ quà tặng độc quyền.",
+    "description": "Hàng ghế VIP đầu tiên sát mặt nước, lối check-in riêng, trọn bộ quà tặng độc quyền.",
+    "image": "/assets/tu-linh.jpg"
+  },
+  {
+    "id": "khan",
+    "name": "Khăn Bandana Thủy Mộng",
+    "title": "Khăn Bandana Thủy Mộng",
+    "type": "merch",
+    "price": 70000,
+    "baseQuantity": 100,
+    "quantity": 100,
+    "benefit": "Khăn bandana thiết kế hoa văn rối nước độc quyền Thủy Mộng.",
+    "description": "Khăn bandana thiết kế hoa văn rối nước độc quyền Thủy Mộng.",
+    "image": "/assets/khan_bandana.jpg"
+  },
+  {
+    "id": "combo-merch",
+    "name": "Combo Merch Thủy Mộng",
+    "title": "Combo Merch Thủy Mộng",
+    "type": "merch",
+    "price": 100000,
+    "baseQuantity": 80,
+    "quantity": 80,
+    "benefit": "Bộ quà lưu niệm độc quyền gồm quạt, túi vải canvas và móc khóa nghệ thuật.",
+    "description": "Bộ quà lưu niệm độc quyền gồm quạt, túi vải canvas và móc khóa nghệ thuật.",
+    "image": "/assets/combo_merch.jpg"
+  },
+  {
+    "id": "voucher-5",
+    "name": "Voucher 5%",
+    "title": "Voucher giảm 5%",
+    "type": "voucher",
+    "price": 0,
+    "baseQuantity": 9999,
+    "quantity": 9999,
+    "discountPercent": 5,
+    "benefit": "Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.",
+    "description": "Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123."
+  },
+  {
+    "id": "voucher-10",
+    "name": "Voucher 10%",
+    "title": "Voucher giảm 10%",
+    "type": "voucher",
+    "price": 0,
+    "baseQuantity": 9999,
+    "quantity": 9999,
+    "discountPercent": 10,
+    "benefit": "Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.",
+    "description": "Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123."
+  },
+  {
+    "id": "voucher-15",
+    "name": "Voucher 15%",
+    "title": "Voucher giảm 15%",
+    "type": "voucher",
+    "price": 0,
+    "baseQuantity": 9999,
+    "quantity": 9999,
+    "discountPercent": 15,
+    "benefit": "Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.",
+    "description": "Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123."
+  }
+]

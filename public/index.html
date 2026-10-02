@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/styles.css?v=8" />
   </head>
   <body>
     <div class="page-shell">
@@ -32,6 +32,7 @@
             <a href="#about">Sự kiện</a>
             <a href="#tickets">Hạng vé</a>
             <a href="#merch">Lưu niệm</a>
+            <a href="#voucher">Vourcher</a>
             <a href="#checkout">Thanh toán</a>
           </nav>
 
@@ -160,6 +161,21 @@
           </div>
         </section>
 
+        <section class="section voucher-section" id="voucher">
+          <div class="container">
+            <div class="section-heading inline">
+              <div>
+                <p class="eyebrow">Ưu đãi độc quyền</p>
+                <h2>Vourcher</h2>
+              </div>
+            </div>
+            <div style="background-color: rgba(241, 198, 107, 0.1); border-left: 4px solid #f1c66b; padding: 12px 16px; margin-bottom: 24px; border-radius: 4px; color: #f1c66b; font-weight: 500; font-size: 0.95em;">
+              <strong>Lưu ý:</strong> Nhập đúng mã giftcode <code>samloc123</code> để kích hoạt và thêm voucher vào giỏ hàng. Mỗi voucher sẽ giảm trực tiếp phần trăm tương ứng trên tổng hóa đơn.
+            </div>
+            <div class="voucher-grid" id="voucher-grid"></div>
+          </div>
+        </section>
+
         <section class="section cart-section" id="checkout">
           <div class="container checkout-grid">
             <div class="cart-panel">
@@ -282,8 +298,34 @@
       </div>
     </div>
 
+    <div id="giftcode-modal" class="giftcode-modal hidden" aria-hidden="true">
+      <div class="giftcode-modal-backdrop" data-close-giftcode-modal="true"></div>
+      <div class="giftcode-modal-card" role="dialog" aria-modal="true" aria-labelledby="giftcode-modal-title">
+        <button type="button" class="giftcode-modal-close" data-close-giftcode-modal="true" aria-label="Đóng">×</button>
+        <div class="giftcode-modal-icon">🎁</div>
+        <h3 id="giftcode-modal-title">Xác thực Giftcode</h3>
+        <p id="giftcode-modal-desc">
+          Vui lòng nhập đúng mã giftcode để kích hoạt và thêm <strong id="giftcode-voucher-name" style="color: #f1c66b;">Voucher</strong> vào giỏ hàng.
+        </p>
+        <div class="giftcode-input-wrap">
+          <input
+            type="text"
+            id="giftcode-input"
+            placeholder="Nhập mã giftcode..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div id="giftcode-error-msg" class="giftcode-error-msg">Mã giftcode không chính xác! Vui lòng thử lại.</div>
+        </div>
+        <div class="giftcode-modal-actions">
+          <button type="button" id="giftcode-submit-btn" class="btn btn-primary">Xác nhận</button>
+          <button type="button" class="btn btn-secondary" data-close-giftcode-modal="true">Hủy</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast" aria-live="polite"></div>
 
-    <script src="/assets/script.js?v=7"></script>
+    <script src="/assets/script.js?v=8"></script>
   </body>
 </html>

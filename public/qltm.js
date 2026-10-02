@@ -540,7 +540,7 @@ async function loadItems() {
         </td>
         <td><strong>${item.name}</strong><br/><small style="color: #666;">${displayTitle}</small><br/><small style="color: #666;">Kho: ${totalStock} · Còn: ${remainingStock}</small></td>
         <td><code>${item.id}</code></td>
-        <td>${item.type === 'ticket' ? 'Vé (Ticket)' : 'Ấn phẩm (Merch)'}</td>
+        <td>${item.type === 'voucher' ? 'Voucher' : (item.type === 'ticket' ? 'Vé (Ticket)' : 'Ấn phẩm (Merch)')}</td>
         <td>${formatCurrency(item.price)}</td>
         <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.benefit || ''}">
           ${item.benefit || '—'}

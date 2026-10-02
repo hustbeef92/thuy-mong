@@ -626,3 +626,45 @@ test('POST /api/orders/:orderCode/proof saves proof image and updates status', a
   }
 });
 
+test('POST /api/orders applies voucher discount correctly (5%, 10%, 15%)', async () => {
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+
+    // Test voucher 10%
+    const res10 = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách Voucher', phone: '0901112233', email: 'voucher10@example.com' },
+      cart: {
+        items: [
+          { id: 'pt', name: 'Vé Phổ Thông', price: 200000, quantity: 1, type: 'ticket' },
+          { id: 'voucher-10', name: 'Voucher 10%', price: 0, quantity: 1, type: 'voucher', discountPercent: 10 }
+        ]
+      },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(res10.status, 201);
+    // 200,000 - 10% = 180,000
+    assert.equal(res10.json.order.total, 180000);
+
+    // Test voucher 15%
+    const res15 = await request(global.fetch, 'POST', '/api/orders', {
+      customer: { name: 'Khách Voucher 15', phone: '0901112234', email: 'voucher15@example.com' },
+      cart: {
+        items: [
+          { id: 'pt', name: 'Vé Phổ Thông', price: 200000, quantity: 1, type: 'ticket' },
+          { id: 'voucher-15', name: 'Voucher 15%', price: 0, quantity: 1, type: 'voucher', discountPercent: 15 }
+        ]
+      },
+      paymentMethod: 'BANK'
+    }, port);
+
+    assert.equal(res15.status, 201);
+    // 200,000 - 15% = 170,000
+    assert.equal(res15.json.order.total, 170000);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+

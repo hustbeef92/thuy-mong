@@ -3,10 +3,12 @@ const PENDING_ORDER_STORAGE_KEY = 'thuymong.pendingOrder';
 const appState = {
   tickets: [],
   merch: [],
+  vouchers: [],
   cart: [],
   paymentPollTimer: null,
   paymentExpiryTimer: null,
-  pendingOrderRecovery: null
+  pendingOrderRecovery: null,
+  pendingVoucherToAdd: null
 };
 
 const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
@@ -373,10 +375,12 @@ function updateCartButton() {
 function removeCartItem(id, type) {
   appState.cart = appState.cart.filter((item) => !(item.id === id && item.type === type));
   renderCart();
+  renderVouchers();
   updateCartButton();
 }
 
 function changeCartQuantity(id, type, delta) {
+  if (type === 'voucher') return;
   const item = appState.cart.find((entry) => entry.id === id && entry.type === type);
   if (!item) return;
 
@@ -640,13 +644,16 @@ function bindAddButtons(container) {
 function calculateCartDiscountSummary(items = []) {
   const normalizedItems = Array.isArray(items) ? items.map((item) => ({
     id: String(item.id || ''),
+    name: String(item.name || ''),
     price: Number(item.price) || 0,
     quantity: Number(item.quantity) || 0,
-    type: String(item.type || 'ticket')
+    type: String(item.type || 'ticket'),
+    discountPercent: Number(item.discountPercent) || 0
   })) : [];
 
   const ticketItems = normalizedItems.filter((item) => item.type === 'ticket');
   const merchItems = normalizedItems.filter((item) => item.type === 'merch');
+  const voucherItems = normalizedItems.filter((item) => item.type === 'voucher');
   const ticketCount = ticketItems.reduce((sum, item) => sum + item.quantity, 0);
   const ticketTierIds = new Set(ticketItems.map((item) => item.id));
   const hasValueTicket = ticketTierIds.has('sao-may') || ticketTierIds.has('thanh-la') || ticketTierIds.has('y-mon');
@@ -686,6 +693,26 @@ function calculateCartDiscountSummary(items = []) {
     subtotal -= discountAmount;
   }
 
+  // Voucher giảm 5%, 10%, 15% trên tổng hóa đơn
+  if (voucherItems.length > 0 && subtotal > 0) {
+    voucherItems.forEach((vItem) => {
+      let percent = vItem.discountPercent;
+      if (!percent) {
+        if (vItem.id === 'voucher-15' || vItem.id.includes('15') || vItem.name?.includes('15%')) percent = 15;
+        else if (vItem.id === 'voucher-10' || vItem.id.includes('10') || vItem.name?.includes('10%')) percent = 10;
+        else if (vItem.id === 'voucher-5' || vItem.id.includes('5') || vItem.name?.includes('5%')) percent = 5;
+      }
+      if (percent > 0) {
+        const discountAmount = Math.round(subtotal * (percent / 100));
+        discounts.push({
+          label: `Voucher giảm ${percent}% tổng hóa đơn`,
+          amount: discountAmount
+        });
+        subtotal -= discountAmount;
+      }
+    });
+  }
+
   return {
     subtotal: Math.max(0, subtotal + (discounts.reduce((sum, item) => sum + item.amount, 0))),
     discountTotal: discounts.reduce((sum, item) => sum + item.amount, 0),
@@ -708,20 +735,37 @@ function renderCart() {
   const summary = calculateCartDiscountSummary(appState.cart);
 
   cartItemsEl.innerHTML = appState.cart
-    .map((item) => `
-      <div class="cart-item">
-        <div class="cart-item-info">
-          <strong>${item.name}</strong>
-          <span>${item.quantity} x ${formatCurrency(item.price)}</span>
+    .map((item) => {
+      if (item.type === 'voucher') {
+        const percent = item.discountPercent || (item.id === 'voucher-15' ? 15 : item.id === 'voucher-10' ? 10 : 5);
+        return `
+          <div class="cart-item voucher-cart-item">
+            <div class="cart-item-info">
+              <strong>🏷️ ${item.name}</strong>
+              <span style="color: #2da76d; font-weight: 600;">Giảm ${percent}% tổng hóa đơn</span>
+            </div>
+            <div class="cart-item-actions">
+              <span class="voucher-tag-pill" style="color: #2da76d; border-color: rgba(45, 167, 109, 0.4); background: rgba(45, 167, 109, 0.1);">Giftcode: samloc123</span>
+              <button type="button" class="cart-remove" data-cart-action="remove" data-id="${item.id}" data-type="${item.type}">Xóa</button>
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="cart-item">
+          <div class="cart-item-info">
+            <strong>${item.name}</strong>
+            <span>${item.quantity} x ${formatCurrency(item.price)}</span>
+          </div>
+          <div class="cart-item-actions">
+            <button type="button" class="cart-qty-btn" data-cart-action="decrease" data-id="${item.id}" data-type="${item.type}">−</button>
+            <button type="button" class="cart-qty-btn" data-cart-action="increase" data-id="${item.id}" data-type="${item.type}">+</button>
+            <strong>${formatCurrency(item.price * item.quantity)}</strong>
+            <button type="button" class="cart-remove" data-cart-action="remove" data-id="${item.id}" data-type="${item.type}">Xóa</button>
+          </div>
         </div>
-        <div class="cart-item-actions">
-          <button type="button" class="cart-qty-btn" data-cart-action="decrease" data-id="${item.id}" data-type="${item.type}">−</button>
-          <button type="button" class="cart-qty-btn" data-cart-action="increase" data-id="${item.id}" data-type="${item.type}">+</button>
-          <strong>${formatCurrency(item.price * item.quantity)}</strong>
-          <button type="button" class="cart-remove" data-cart-action="remove" data-id="${item.id}" data-type="${item.type}">Xóa</button>
-        </div>
-      </div>
-    `)
+      `;
+    })
     .join('');
 
   const discountMarkup = summary.discounts.length
@@ -759,6 +803,137 @@ function renderCart() {
   });
 }
 
+// ==========================================
+// RENDER DANH MỤC VOUCHER (KHÔNG DÙNG HÌNH ẢNH)
+// ==========================================
+function renderVouchers() {
+  const container = document.getElementById('voucher-grid');
+  if (!container) return;
+
+  container.innerHTML = (appState.vouchers || [])
+    .map((item) => {
+      const percent = item.discountPercent || (item.id?.includes('15') ? 15 : item.id?.includes('10') ? 10 : 5);
+      const isApplied = appState.cart.some((c) => c.type === 'voucher' && c.id === item.id);
+      return `
+      <article class="voucher-card">
+        <div>
+          <div class="voucher-card-header">
+            <span class="voucher-badge">${percent}%</span>
+            <span class="voucher-tag-pill">Vourcher</span>
+          </div>
+          <h3 class="voucher-title">${item.name}</h3>
+          <p class="voucher-desc">${item.description || item.benefit || `Giảm ${percent}% trực tiếp trên tổng hóa đơn thanh toán.`}</p>
+          <div class="voucher-code-hint">
+            <span>🔒 Nhập Giftcode: <strong>samloc123</strong></span>
+          </div>
+        </div>
+        <div class="voucher-footer">
+          <div class="voucher-price-block">
+            <span>Giá áp dụng</span>
+            <strong>0 VNĐ</strong>
+          </div>
+          <button type="button" class="btn-add-voucher" data-add-voucher="${item.id}">
+            ${isApplied ? '✓ Đã trong giỏ' : 'Thêm vào giỏ'}
+          </button>
+        </div>
+      </article>
+    `;
+    })
+    .join('');
+
+  container.querySelectorAll('[data-add-voucher]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const voucherId = button.dataset.addVoucher;
+      const voucher = (appState.vouchers || []).find((v) => v.id === voucherId);
+      if (voucher) {
+        openGiftcodeModal(voucher);
+      }
+    });
+  });
+}
+
+function openGiftcodeModal(voucher) {
+  appState.pendingVoucherToAdd = voucher;
+  const modal = document.getElementById('giftcode-modal');
+  const nameEl = document.getElementById('giftcode-voucher-name');
+  const inputEl = document.getElementById('giftcode-input');
+  const errorEl = document.getElementById('giftcode-error-msg');
+
+  if (nameEl) nameEl.textContent = voucher.name;
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.classList.remove('error-shake');
+  }
+  if (errorEl) {
+    errorEl.classList.remove('show');
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => inputEl?.focus(), 100);
+  }
+}
+
+function closeGiftcodeModal() {
+  const modal = document.getElementById('giftcode-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  appState.pendingVoucherToAdd = null;
+}
+
+function handleGiftcodeSubmit() {
+  const inputEl = document.getElementById('giftcode-input');
+  const errorEl = document.getElementById('giftcode-error-msg');
+  const code = inputEl ? inputEl.value.trim().toLowerCase() : '';
+
+  if (code !== 'samloc123') {
+    if (errorEl) {
+      errorEl.textContent = 'Mã giftcode không chính xác! Vui lòng nhập lại.';
+      errorEl.classList.add('show');
+    }
+    if (inputEl) {
+      inputEl.classList.add('error-shake');
+      setTimeout(() => inputEl.classList.remove('error-shake'), 450);
+      inputEl.focus();
+    }
+    return;
+  }
+
+  const voucher = appState.pendingVoucherToAdd;
+  if (!voucher) {
+    closeGiftcodeModal();
+    return;
+  }
+
+  // Thay thế voucher cũ trong giỏ hàng nếu có
+  appState.cart = appState.cart.filter((item) => item.type !== 'voucher');
+
+  const percent = voucher.discountPercent || (voucher.id?.includes('15') ? 15 : voucher.id?.includes('10') ? 10 : 5);
+  appState.cart.push({
+    id: voucher.id,
+    name: voucher.name,
+    price: 0,
+    quantity: 1,
+    type: 'voucher',
+    discountPercent: percent
+  });
+
+  closeGiftcodeModal();
+  renderCart();
+  renderVouchers();
+  updateCartButton();
+  showToast(`${voucher.name} (-${percent}%) đã được thêm vào giỏ hàng thành công!`);
+
+  // Cuộn nhẹ tới giỏ hàng
+  const checkoutSection = document.getElementById('checkout');
+  if (checkoutSection) {
+    checkoutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 async function loadData() {
   try {
     const response = await fetch('/api/admin/items');
@@ -768,6 +943,17 @@ async function loadData() {
     appState.tickets = catalog.filter((item) => item.type === 'ticket');
     appState.tickets.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
     appState.merch = catalog.filter((item) => item.type === 'merch');
+    appState.vouchers = catalog.filter((item) => item.type === 'voucher');
+
+    const defaultVouchersList = [
+      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
+      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
+      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' }
+    ];
+
+    if (!appState.vouchers || appState.vouchers.length === 0) {
+      appState.vouchers = defaultVouchersList;
+    }
 
     const footerList = document.querySelectorAll('.site-footer li');
     if (footerList.length >= 4) {
@@ -779,6 +965,7 @@ async function loadData() {
 
     renderTickets();
     renderMerch();
+    renderVouchers();
     renderCart();
   } catch (error) {
     console.error('Failed to load data:', error);
@@ -797,8 +984,15 @@ async function loadData() {
       { id: 'fan', name: 'Quạt giấy lưu niệm', price: 1000 }
     ];
 
+    appState.vouchers = [
+      { id: 'voucher-5', name: 'Voucher 5%', type: 'voucher', price: 0, discountPercent: 5, benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
+      { id: 'voucher-10', name: 'Voucher 10%', type: 'voucher', price: 0, discountPercent: 10, benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' },
+      { id: 'voucher-15', name: 'Voucher 15%', type: 'voucher', price: 0, discountPercent: 15, benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.', description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.' }
+    ];
+
     renderTickets();
     renderMerch();
+    renderVouchers();
     renderCart();
   }
   generateCaptcha();
@@ -925,6 +1119,12 @@ checkoutForm.addEventListener('submit', async (event) => {
     return;
   }
 
+  const hasRealItem = appState.cart.some((item) => item.type !== 'voucher');
+  if (!hasRealItem) {
+    showToast('Vui lòng chọn ít nhất 1 vé hoặc ấn phẩm trước khi thanh toán.');
+    return;
+  }
+
   const formData = new FormData(checkoutForm);
 
   const customerName = String(formData.get('name') || '').trim();
@@ -981,7 +1181,8 @@ checkoutForm.addEventListener('submit', async (event) => {
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        type: item.type
+        type: item.type,
+        discountPercent: item.discountPercent || 0
       }))
     }
   };
@@ -1134,6 +1335,29 @@ if (pendingOrderCancelBtn) {
     }
   });
 }
+
+document.querySelectorAll('[data-close-giftcode-modal]').forEach((el) => {
+  el.addEventListener('click', closeGiftcodeModal);
+});
+
+const giftcodeSubmitBtn = document.getElementById('giftcode-submit-btn');
+if (giftcodeSubmitBtn) {
+  giftcodeSubmitBtn.addEventListener('click', handleGiftcodeSubmit);
+}
+
+const giftcodeInput = document.getElementById('giftcode-input');
+if (giftcodeInput) {
+  giftcodeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleGiftcodeSubmit();
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeGiftcodeModal();
+});
 
 loadData();
 restorePendingOrderFromStorage();

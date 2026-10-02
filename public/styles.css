@@ -1996,3 +1996,327 @@ body .site-footer {
 .qty-control .qty-input:focus {
   outline: none;
 }
+
+/* ==========================================
+   DANH MỤC VOUCHER (KHÔNG DÙNG HÌNH ẢNH)
+   ========================================== */
+.voucher-section {
+  background: #051619;
+  border-top: 1px solid rgba(241, 198, 107, 0.15);
+  border-bottom: 1px solid rgba(241, 198, 107, 0.15);
+  padding: 60px 0;
+}
+
+.voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .voucher-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.voucher-card {
+  position: relative;
+  background: radial-gradient(circle at 10% 20%, rgba(13, 38, 42, 0.95), rgba(5, 20, 23, 0.98));
+  border: 1px dashed rgba(241, 198, 107, 0.45);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+}
+
+.voucher-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #f1c66b, #d9a85c, #f8e7b8);
+}
+
+.voucher-card:hover {
+  transform: translateY(-5px);
+  border-color: #f1c66b;
+  box-shadow: 0 20px 40px rgba(241, 198, 107, 0.18);
+}
+
+.voucher-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.voucher-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, rgba(241, 198, 107, 0.22), rgba(217, 168, 92, 0.1));
+  border: 1px solid #f1c66b;
+  color: #f1c66b;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.5px;
+}
+
+.voucher-tag-pill {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(240, 228, 201, 0.7);
+  font-weight: 600;
+  background: rgba(241, 198, 107, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(241, 198, 107, 0.15);
+}
+
+.voucher-title {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+  margin: 0 0 10px;
+}
+
+.voucher-desc {
+  font-size: 0.92rem;
+  color: rgba(240, 228, 201, 0.8);
+  line-height: 1.6;
+  margin-bottom: 18px;
+  flex: 1;
+}
+
+.voucher-code-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #f1c66b;
+  background: rgba(241, 198, 107, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px dashed rgba(241, 198, 107, 0.3);
+}
+
+.voucher-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(241, 198, 107, 0.2);
+}
+
+.voucher-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.voucher-price-block span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: rgba(240, 228, 201, 0.6);
+  letter-spacing: 1px;
+}
+
+.voucher-price-block strong {
+  font-size: 1.2rem;
+  color: #2da76d;
+}
+
+.btn-add-voucher {
+  background: linear-gradient(135deg, #f1c66b, #d9a85c);
+  color: #07181a;
+  border: none;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(241, 198, 107, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-voucher:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 24px rgba(241, 198, 107, 0.4);
+}
+
+/* ==========================================
+   MODAL NHẬP GIFTCODE
+   ========================================== */
+.giftcode-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.giftcode-modal.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.giftcode-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 13, 16, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.giftcode-modal-card {
+  position: relative;
+  background: #081e22;
+  border: 1px solid rgba(241, 198, 107, 0.4);
+  border-radius: 20px;
+  max-width: 440px;
+  width: 100%;
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #f6f2ea;
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.giftcode-modal-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, rgba(241, 198, 107, 0.25), rgba(217, 168, 92, 0.12));
+  border: 1px solid #f1c66b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.giftcode-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: rgba(246, 242, 234, 0.6);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.giftcode-modal-close:hover {
+  color: #f1c66b;
+}
+
+.giftcode-modal-card h3 {
+  margin: 0 0 10px;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 1.85rem;
+  color: var(--gold-soft);
+}
+
+.giftcode-modal-card p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(240, 228, 201, 0.8);
+  line-height: 1.5;
+}
+
+.giftcode-input-wrap {
+  margin: 20px 0 16px;
+}
+
+.giftcode-input-wrap input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 2px;
+  color: #f1c66b !important;
+  background: #051619 !important;
+  border: 1px solid rgba(241, 198, 107, 0.35) !important;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.giftcode-input-wrap input:focus {
+  border-color: #f1c66b !important;
+  box-shadow: 0 0 0 3px rgba(241, 198, 107, 0.2);
+}
+
+.giftcode-input-wrap input.error-shake {
+  border-color: #ff6b6b !important;
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.giftcode-error-msg {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  display: none;
+}
+
+.giftcode-error-msg.show {
+  display: block;
+}
+
+.giftcode-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.giftcode-modal-actions .btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cart-item.voucher-cart-item {
+  background: rgba(45, 167, 109, 0.08) !important;
+  border-color: rgba(45, 167, 109, 0.3) !important;
+}

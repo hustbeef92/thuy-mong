@@ -88,22 +88,71 @@ function saveItems(items) {
   }
 }
 
+const DEFAULT_VOUCHERS = [
+  {
+    id: 'voucher-5',
+    name: 'Voucher 5%',
+    title: 'Voucher giảm 5%',
+    type: 'voucher',
+    price: 0,
+    baseQuantity: 9999,
+    quantity: 9999,
+    discountPercent: 5,
+    benefit: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán.',
+    description: 'Giảm 5% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+  },
+  {
+    id: 'voucher-10',
+    name: 'Voucher 10%',
+    title: 'Voucher giảm 10%',
+    type: 'voucher',
+    price: 0,
+    baseQuantity: 9999,
+    quantity: 9999,
+    discountPercent: 10,
+    benefit: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán.',
+    description: 'Giảm 10% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+  },
+  {
+    id: 'voucher-15',
+    name: 'Voucher 15%',
+    title: 'Voucher giảm 15%',
+    type: 'voucher',
+    price: 0,
+    baseQuantity: 9999,
+    quantity: 9999,
+    discountPercent: 15,
+    benefit: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán.',
+    description: 'Giảm 15% trực tiếp trên tổng hóa đơn thanh toán khi nhập mã giftcode samloc123.'
+  }
+];
+
+function ensureVouchersInList(items = []) {
+  const result = Array.isArray(items) ? [...items] : [];
+  for (const v of DEFAULT_VOUCHERS) {
+    if (!result.some((it) => it.id === v.id)) {
+      result.push(v);
+    }
+  }
+  return result;
+}
+
 async function readItemsPersistent() {
   const localItems = readItems();
 
-  if (!supabaseEnabled) return localItems;
+  if (!supabaseEnabled) return ensureVouchersInList(localItems);
 
   try {
     const rows = await supabaseRequest('items?select=item_data&order=updated_at.desc');
     const remoteItems = Array.isArray(rows) ? rows.map((row) => row.item_data).filter(Boolean) : [];
     if (remoteItems.length > 0) {
-      return remoteItems;
+      return ensureVouchersInList(remoteItems);
     }
   } catch (error) {
     console.warn('Supabase items read failed, falling back to local file store:', error.message);
   }
 
-  return localItems;
+  return ensureVouchersInList(localItems);
 }
 
 async function saveItemsPersistent(items) {
@@ -328,13 +377,16 @@ function generateOrderCode() {
 function calculateOrderTotal(items = []) {
   const normalizedItems = Array.isArray(items) ? items.map((item) => ({
     id: String(item.id || ''),
+    name: String(item.name || ''),
     price: Number(item.price) || 0,
     quantity: Number(item.quantity) || 0,
-    type: String(item.type || 'ticket')
+    type: String(item.type || 'ticket'),
+    discountPercent: Number(item.discountPercent) || 0
   })) : [];
 
   const ticketItems = normalizedItems.filter((item) => item.type === 'ticket');
   const merchItems = normalizedItems.filter((item) => item.type === 'merch');
+  const voucherItems = normalizedItems.filter((item) => item.type === 'voucher');
   const ticketCount = ticketItems.reduce((sum, item) => sum + item.quantity, 0);
   const ticketTierIds = new Set(ticketItems.map((item) => item.id));
   const hasValueTicket = ticketTierIds.has('sao-may') || ticketTierIds.has('thanh-la') || ticketTierIds.has('y-mon');
@@ -356,6 +408,22 @@ function calculateOrderTotal(items = []) {
 
   if (hasTuLinh && comboItem) {
     subtotal -= comboItem.price * comboItem.quantity;
+  }
+
+  // Voucher giảm giá 5%, 10%, 15% trên tổng hóa đơn
+  if (voucherItems.length > 0 && subtotal > 0) {
+    voucherItems.forEach((vItem) => {
+      let percent = vItem.discountPercent;
+      if (!percent) {
+        if (vItem.id === 'voucher-15' || vItem.id.includes('15') || vItem.name?.includes('15%')) percent = 15;
+        else if (vItem.id === 'voucher-10' || vItem.id.includes('10') || vItem.name?.includes('10%')) percent = 10;
+        else if (vItem.id === 'voucher-5' || vItem.id.includes('5') || vItem.name?.includes('5%')) percent = 5;
+      }
+      if (percent > 0) {
+        const discountAmount = Math.round(subtotal * (percent / 100));
+        subtotal -= discountAmount;
+      }
+    });
   }
 
   return Math.round(Math.max(0, subtotal));
@@ -825,7 +893,8 @@ app.post('/api/orders', async (req, res) => {
     name: item.name,
     price: Number(item.price) || 0,
     quantity: Number(item.quantity) || 0,
-    type: item.type || 'ticket'
+    type: item.type || 'ticket',
+    discountPercent: Number(item.discountPercent) || 0
   }));
 
   if (!items.length || items.some((item) => !item.id || !item.name || item.quantity <= 0 || item.price < 0)) {
